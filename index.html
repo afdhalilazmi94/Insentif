@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generator Data Lampiran</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f3f5f8;--card:#fff;--ink:#1b2430;--mute:#5d6b7c;--line:#d5dce5;--brand:#1f3864;--ok:#0b6b2f;--bad:#a11b1b}
+@media (prefers-color-scheme:dark){:root{--bg:#10151c;--card:#19212b;--ink:#e8edf3;--mute:#9aa8b8;--line:#2b3644;--brand:#8fb0ea;--ok:#5ad18a;--bad:#ff8a8a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 "Segoe UI",system-ui,sans-serif}
+header{padding:22px 28px 6px}
+h1{margin:0;font-size:22px;font-weight:700;color:var(--brand)}
+header p{margin:4px 0 0;color:var(--mute)}
+main{padding:14px 28px 40px;display:grid;gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px}
+#drop{border:2px dashed var(--line);text-align:center;padding:28px 16px;cursor:pointer}
+#drop.over{border-color:var(--brand);background:rgba(31,56,100,.06)}
+#drop b{display:block;font-size:16px}
+#drop span{color:var(--mute)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.chip{padding:3px 10px;border-radius:99px;border:1px solid var(--line);font-size:12px}
+.chip.ok{color:var(--ok);border-color:var(--ok)}.chip.no{color:var(--bad);border-color:var(--bad)}
+#msg{margin-top:10px;color:var(--bad);white-space:pre-line}
+.kpis{display:flex;flex-wrap:wrap;gap:12px}
+.kpi{flex:1 1 150px;border-left:4px solid var(--brand);padding:4px 12px}
+.kpi small{color:var(--mute);display:block}.kpi strong{font-size:20px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.bar input{flex:1 1 220px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+button{padding:8px 14px;border:0;border-radius:6px;background:var(--brand);color:#fff;font-weight:600;cursor:pointer}
+@media (prefers-color-scheme:dark){button{color:#10151c}}
+button.alt{background:transparent;color:var(--brand);border:1px solid var(--brand)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.wrap{overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;font-size:12px;white-space:nowrap}
+th,td{border:1px solid #bfbfbf;padding:3px 8px;color:#1b2430}
+th{position:sticky;top:0;color:#fff;text-align:center;white-space:normal;min-width:92px;height:48px;z-index:1}
+td.n{text-align:right}td.c{text-align:center}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>Generator Data Lampiran</h1>
+  <p>Unggah workbook Excel berisi sheet DP, Dakar, HK 2, Partial, dan Denda. Tabel Lampiran dihitung di browser Anda; data tidak dikirim ke server.</p>
+</header>
+<main>
+  <section class="card">
+    <div id="drop" tabindex="0" role="button">
+      <b>Tarik file .xlsx / .xlsm ke sini, atau klik untuk memilih</b>
+      <span id="fname">Belum ada file</span>
+      <input id="file" type="file" accept=".xlsx,.xlsm,.xls" class="hidden">
+    </div>
+    <div class="chips" id="chips"></div>
+    <div id="msg" role="alert"></div>
+  </section>
+  <section class="card hidden" id="result">
+    <div class="kpis" id="kpis"></div>
+    <div class="bar" style="margin-top:14px">
+      <input id="q" type="search" placeholder="Cari ID person, nama, cabang…" aria-label="Cari">
+      <button id="dlx">Unduh Excel</button>
+      <button id="dlc" class="alt">Unduh CSV</button>
+    </div>
+    <div class="wrap"><table id="tbl"></table></div>
+  </section>
+</main>
+<script>
+const REQ=['DP','Dakar','HK 2','Partial','Denda'];
+const MON=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+const HEAD=["THN","BLN","WILAYAH","CLUSTER","KD CAB","NM_CABANG","ID_PERSON","NPK","NAMA KARYAWAN","JABATAN","JOB","BEBAN TAGIH BLM PENUGASAN","BEBAN NON TAGIH BLM PENUGASAN","BAHAN ASSIGN","SELESAI ASSIGN","AR CO ASSIGN","TARGET PARAMETER","ACH PARAMETER"];
+for(let k=1;k<=5;k++)for(const t of['REGULER','MUSIMAN'])HEAD.push(`LT ${k} ${t}`,`INDEKS LT ${k} ${t}`,`INSENTIF LT ${k} ${t}`);
+HEAD.push("TOTAL INSENTIF KEL. LT","PENGALI","TOTAL INSENTIF LT","INSENTIF DENDA","INSENTIF ALL");
+/* kolom persen & angka (indeks 0 = kolom C) */
+const PCT=new Set([15,16,17,49]),NUM=new Set([11,12,13,14,48,50,51,52]);
+for(let k=0;k<10;k++){const b=18+k*3;PCT.add(b+1);NUM.add(b);NUM.add(b+2)}
+/* warna grup, sama seperti macro VBA */
+const BLK=[["#2f5496","#d9e1f2","#edf1f9"],["#38761d","#e2efda","#f1f7ed"],["#c55a11","#fce4d6","#fef3ec"],["#7030a0","#eadef4","#f5effa"],["#008080","#daf0f0","#edf7f7"]];
+function colorOf(i){
+  if(i<=10)return["#1f3864","#ddebf7"];if(i<=12)return["#595959","#f2f2f2"];if(i<=17)return["#00708c","#def2f7"];
+  if(i<=47){const k=Math.floor((i-18)/6),m=(i-18)%6>=3;return[BLK[k][0],BLK[k][m?2:1]]}
+  if(i<=50)return["#7f6000","#fff2cc"];if(i===51)return["#990000","#fce4e4"];return["#006100","#c6efce"];
+}
+const norm=v=>v==null?'':String(v).trim().toUpperCase();
+const empty=v=>v==null||String(v).trim()==='';
+const num=v=>typeof v==='number'?v:(parseFloat(String(v).replace(/,/g,''))||0);
+const cl=s=>[...s].reduce((a,c)=>a*26+c.charCodeAt(0)-64,0)-1;
+let OUT=[];
+
+function findCol(aoa,rows,specs){
+  for(const r of rows){const row=aoa[r]||[];
+    for(const [name,mode] of specs){const n=name.toUpperCase();
+      for(let c=0;c<row.length;c++){const v=norm(row[c]);if(v&&(mode==='w'?v===n:v.includes(n)))return c}}}
+  return -1;
+}
+function rng(aoa,a){const m=/([A-Z]+)(\d+):([A-Z]+)(\d+)/.exec(a),c1=cl(m[1]),c2=cl(m[3]);
+  return aoa.slice(+m[2]-1,+m[4]).map(r=>{const o=[];for(let c=c1;c<=c2;c++)o.push((r||[])[c]);return o})}
+function firstMap(aoa,kc,from=0,to=aoa.length){const m=new Map();
+  for(let i=from;i<to;i++){const r=aoa[i];if(!r)continue;const k=norm(r[kc]);if(k!==''&&!m.has(k))m.set(k,r)}return m}
+function approx(tbl,ret,x){let best=null;
+  for(const r of tbl){const k=r[0];if(typeof k!=='number')continue;if(k<=x)best=r;else break}
+  return best&&typeof best[ret-1]==='number'?best[ret-1]:null}
+function parseDate(v){
+  if(v instanceof Date&&!isNaN(v))return{y:v.getFullYear(),m:v.getMonth()+1};
+  if(typeof v==='number'&&v>30000&&v<70000){const d=XLSX.SSF.parse_date_code(v);return{y:d.y,m:d.m}}
+  if(typeof v==='string'&&v.trim()){const s=v.trim(),a=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+    if(a)return{y:+a[1],m:+a[2]};const t=Date.parse(s);if(!isNaN(t)){const d=new Date(t);return{y:d.getFullYear(),m:d.getMonth()+1}}}
+  return null}
+
+function generate(S){
+  /* ---- kolom DP (header baris 4) ---- */
+  const dp=S['DP'],H=[3];
+  const cPIC=findCol(dp,H,[['PIC_INSENTIF','w']]),cJab=findCol(dp,H,[['JABATAN_PIC_INSENTIF','w']]),
+    cTgl=findCol(dp,H,[['TGL_PENYELESAIAN','w']]),
+    cLKP=findCol(dp,H,[['TGL LKP PERTAMA','p'],['TGL_LKP','p']]),
+    cTyp=findCol(dp,H,[['TYPE_BEBAN_TAGIH_AWAL','p'],['TYPE BEBAN TAGIH','p']]),
+    cSt=findCol(dp,H,[['STAT_AMBC','w'],['STAT AMBC','p']]),
+    cCyc=findCol(dp,H,[['CYCLE_AWAL','p'],['CYCLE','p']]),
+    cBU=findCol(dp,H,[['BISNIS UNIT','p'],['BISNIS_UNIT','p']]);
+  if([cPIC,cJab,cLKP,cTyp,cSt,cCyc,cBU].includes(-1))throw new Error('Ada header kolom yang tidak ditemukan di baris 4 sheet DP.');
+  /* ---- Partial & Denda (header baris 1-5) ---- */
+  const R5=[0,1,2,3,4],pa=S['Partial'];
+  const pPIC=findCol(pa,R5,[['PIC_INSENTIF','w']]),pAC=findCol(pa,R5,[['AC TERBENTUK','p'],['AC_TERBENTUK','p']]),
+    pLT=findCol(pa,R5,[['TIPE LT','p'],['TIPE_LT','p']]),pKon=findCol(pa,R5,[['Tipe kontrak','p'],['TIPE_KONTRAK','p']]);
+  if([pPIC,pAC,pLT,pKon].includes(-1))throw new Error('Header PIC_INSENTIF, AC TERBENTUK, TIPE LT, atau Tipe kontrak tidak ditemukan di sheet Partial.');
+  const de=S['Denda'];
+  const dPIC=findCol(de,R5,[['PERSON_ID','p'],['ID_PERSON','p'],['PIC_INSENTIF','p']]),dByr=findCol(de,R5,[['BYR_DENDA','p']]);
+  if(dPIC<0||dByr<0)throw new Error('Header PERSON_ID/PIC_INSENTIF atau BYR_DENDA tidak ditemukan di sheet Denda.');
+
+  /* ---- ID unik CMO + tanggal terbaik ---- */
+  const dict=new Map(),cnt=new Map();
+  for(let i=4;i<dp.length;i++){const r=dp[i];if(!r)continue;
+    const id=r[cPIC];if(empty(id))continue;const k=norm(id);
+    /* hitung beban/assign (COUNTIFS) */
+    const lkp=r[cLKP],lE=empty(lkp),lN=norm(lkp)==='NULL',typ=norm(r[cTyp]),st=norm(r[cSt]);
+    let c=cnt.get(k);if(!c)cnt.set(k,c={n:0,o:0,p:0,q:0});
+    if((lE||lN)&&st==='BELUM SELESAI'){if(typ==='BEBAN TAGIH')c.n++;if(typ==='NON TAGIH')c.o++}
+    if(norm(r[cCyc])==='C0'&&['MOTOR','KTA'].includes(norm(r[cBU]))&&!lE&&!lN){c.p++;if(st==='SELESAI')c.q++}
+    /* kandidat CMO */
+    if(!norm(r[cJab]).includes('CREDIT MARKETING OFFICER')||lE||lN)continue;
+    const d=cTgl>=0?parseDate(r[cTgl]):null,e=dict.get(k);
+    if(!e)dict.set(k,{id,d});else if(!e.d&&d)e.d=d;
+  }
+  /* ---- tabel bantu ---- */
+  const dakar=S['Dakar'];let cDept=findCol(dakar,[0],[['DEPT_ID','p']]);if(cDept<0)cDept=cl('O');
+  const dkMap=firstMap(dakar,0),hk=S['HK 2'];
+  const hkWil=firstMap(hk,0,72,5000),dpB=firstMap(dp,1);
+  const hkTarget=firstMap(hk,cl('L')),LTtbl=rng(hk,'C50:H58'),pengali=rng(hk,'C23:F29'),
+    dendaTbl=rng(hk,'C3:X7'),minTbl=rng(hk,'C22:J29');
+  const ltIdx=(lt,col)=>{const r=LTtbl.find(x=>norm(x[0])===lt);return r&&typeof r[col-1]==='number'?r[col-1]:0};
+  const psum=new Map();
+  for(const r of pa){const k=norm(r[pPIC])+'|'+norm(r[pLT])+'|'+norm(r[pKon]);
+    if(typeof r[pAC]==='number'||(r[pAC]!=null&&!isNaN(parseFloat(r[pAC]))))psum.set(k,(psum.get(k)||0)+num(r[pAC]))}
+  const dsum=new Map();
+  for(const r of de){const k=norm(r[dPIC]);if(k&&r[dByr]!=null)dsum.set(k,(dsum.get(k)||0)+(typeof r[dByr]==='number'?r[dByr]:0))}
+
+  /* ---- bangun baris ---- */
+  const rows=[];
+  for(const [k,{id,d}] of dict){
+    const dk=dkMap.get(k)||[],kd=dk[cDept]??'',kdK=norm(kd);
+    const c=cnt.get(k),p=c.p,q=c.q,ar=p?q/p:0;
+    const tg=hkTarget.get(kdK),s=tg&&typeof tg[cl('O')]==='number'?tg[cl('O')]:0.98;
+    const ach=s?ar/s:0;
+    const row=[d?d.y:'',d?d.m+'_'+MON[d.m-1]:'',(hkWil.get(kdK)||[])[3]??'',(dpB.get(kdK)||[])[3]??'',kd,(dpB.get(kdK)||[])[2]??'',
+      id,dk[1]??'',dk[2]??'',dk[9]??'','CF',c.n,c.o,p,q,ar,s,ach];
+    let tot=0;
+    for(let l=1;l<=5;l++)for(const [t,col] of [['REGULER',3],['MUSIMAN',6]]){
+      const u=psum.get(`${k}|LT ${l}|${t}`)||0,ix=ltIdx(`LT ${l}`,col);row.push(u,ix,u*ix);tot+=u*ix}
+    const pg=approx(pengali,3,ach)??0,ba=ach*tot*pg;
+    const dn=approx(dendaTbl,6,dsum.get(k)||0)??0;
+    const mn=approx(minTbl,8,ach)??0;
+    row.push(tot,pg,ba,dn,(ba<mn?mn:ba)+dn);
+    rows.push(row);
+  }
+  return rows;
+}
+
+/* ---- tampilan ---- */
+const fmtN=v=>typeof v==='number'?(v===0?'-':Math.round(v).toLocaleString('en-US')):v;
+const fmtP=v=>typeof v==='number'?(v*100).toFixed(2)+'%':v;
+const esc=s=>String(s).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]));
+function render(filter=''){
+  const f=filter.trim().toUpperCase();
+  const rows=f?OUT.filter(r=>r.slice(0,11).some(v=>String(v).toUpperCase().includes(f))):OUT;
+  let h='<thead><tr>'+HEAD.map((t,i)=>`<th style="background:${colorOf(i)[0]}">${esc(t)}</th>`).join('')+'</tr></thead><tbody>';
+  for(const r of rows){h+='<tr>';
+    r.forEach((v,i)=>{const bg=colorOf(i)[1];
+      const cls=PCT.has(i)||i<=4?'c':NUM.has(i)?'n':'';
+      const txt=PCT.has(i)?fmtP(v):NUM.has(i)?fmtN(v):v;
+      h+=`<td class="${cls}" style="background:${bg}${i===52?';font-weight:700':''}">${esc(txt)}</td>`});
+    h+='</tr>'}
+  document.getElementById('tbl').innerHTML=h+'</tbody>';
+}
+function kpis(){
+  const sum=i=>OUT.reduce((a,r)=>a+(+r[i]||0),0);
+  const items=[['Jumlah CMO',OUT.length.toLocaleString('en-US')],['Bahan assign',sum(13).toLocaleString('en-US')],
+    ['Selesai assign',sum(14).toLocaleString('en-US')],['Total insentif denda',Math.round(sum(51)).toLocaleString('en-US')],
+    ['Total insentif all',Math.round(sum(52)).toLocaleString('en-US')]];
+  document.getElementById('kpis').innerHTML=items.map(([a,b])=>`<div class="kpi"><small>${a}</small><strong>${b}</strong></div>`).join('');
+}
+function exportFile(type){
+  const aoa=[HEAD,...OUT],ws=XLSX.utils.aoa_to_sheet(aoa);
+  OUT.forEach((r,ri)=>r.forEach((v,ci)=>{const c=ws[XLSX.utils.encode_cell({r:ri+1,c:ci})];
+    if(c&&typeof v==='number')c.z=PCT.has(ci)?'0.00%':NUM.has(ci)?'#,##0':c.z}));
+  ws['!cols']=HEAD.map(()=>({wch:16}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Lampiran');
+  XLSX.writeFile(wb,type==='csv'?'Lampiran.csv':'Lampiran.xlsx',{bookType:type});
+}
+
+/* ---- upload ---- */
+const $=id=>document.getElementById(id);
+function handle(file){
+  $('msg').textContent='';$('fname').textContent=file.name;$('result').classList.add('hidden');
+  const fr=new FileReader();
+  fr.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      const S={};
+      for(const n of REQ){const real=wb.SheetNames.find(x=>x.trim().toLowerCase()===n.toLowerCase());
+        if(real)S[n]=XLSX.utils.sheet_to_json(wb.Sheets[real],{header:1,raw:true,defval:null,blankrows:true})}
+      $('chips').innerHTML=REQ.map(n=>`<span class="chip ${S[n]?'ok':'no'}">${S[n]?'✓':'✗'} ${n}</span>`).join('');
+      const miss=REQ.filter(n=>!S[n]);
+      if(miss.length)throw new Error('Sheet tidak ditemukan: '+miss.join(', ')+'. Pastikan nama sheet sesuai.');
+      OUT=generate(S);
+      if(!OUT.length)throw new Error('Tidak ada data yang memenuhi kriteria (jabatan CREDIT MARKETING OFFICER dengan TGL LKP terisi).');
+      kpis();render();$('result').classList.remove('hidden');
+    }catch(err){$('msg').textContent=err.message}
+  };
+  fr.readAsArrayBuffer(file);
+}
+const drop=$('drop'),inp=$('file');
+drop.onclick=()=>inp.click();
+drop.onkeydown=e=>{if(e.key==='Enter'||e.key===' ')inp.click()};
+inp.onchange=()=>inp.files[0]&&handle(inp.files[0]);
+['dragover','dragenter'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove('over')}));
+drop.addEventListener('drop',e=>e.dataTransfer.files[0]&&handle(e.dataTransfer.files[0]));
+$('q').oninput=e=>render(e.target.value);
+$('dlx').onclick=()=>exportFile('xlsx');
+$('dlc').onclick=()=>exportFile('csv');
+</script>
+</body>
+</html>
