@@ -57,7 +57,16 @@ td.pv{background:#fff;border-right:1px solid #e1e1e1;border-bottom:1px solid #e1
 #gate,#nodata{height:100%;display:flex;align-items:center;justify-content:center;background:#eef2f7;padding:20px}
 #pw{height:40px;border:1px solid #9fb3cf;border-radius:6px;padding:0 12px;font-size:15px}
 #gmsg{font-size:13px;color:#b00020;line-height:1.5}
-body.viewer .admin{display:none}
+body.viewer .admin,body.viewer #tabs{display:none}
+#dash{height:100%;height:100dvh}
+#pubset{border:1px solid #cdd6e2;border-radius:8px;padding:10px 12px;font-size:13px}
+#pubset summary{cursor:pointer;font-weight:600;color:#1f3864}
+.pubf{display:grid;gap:10px;margin-top:10px}
+.pubf label{display:grid;gap:4px;color:#333}
+.pubf input[type=text],.pubf input[type=password]{height:36px;border:1px solid #9fb3cf;border-radius:6px;padding:0 10px;font-size:13px}
+.pubf .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#pst{color:#0b6b2f;font-size:13px}
+#pmsg{font-size:13px;white-space:pre-line}
 </style>
 </head>
 <body>
@@ -68,7 +77,7 @@ body.viewer .admin{display:none}
     <button class="xb" id="bpw">Unlock</button>
     <div id="gmsg" role="alert"></div>
   </div></div>
-<div id="nodata" class="hidden"><div class="upc"><h1>No data yet</h1><p>The dashboard has not been published. Please check back later.</p></div></div>
+<div id="nodata" class="hidden"><div class="upc"><h1>No data yet</h1><p>The dashboard has not been published. Please check back later.</p><p class="note" id="nd"></p></div></div>
 <div id="up" class="hidden">
   <div class="upc">
     <h1>Generator Lampiran</h1>
@@ -80,6 +89,15 @@ body.viewer .admin{display:none}
     <div id="chips"></div>
     <button class="xb" id="bgo" disabled>Process</button>
     <div id="umsg" role="alert"></div>
+    <details id="pubset"><summary id="pubsum">Auto-publish to GitHub: off</summary>
+      <div class="pubf">
+        <label>Repository (owner/repo)<input id="repo" type="text" autocomplete="off"></label>
+        <label>GitHub token<input id="tok" type="password" autocomplete="off" placeholder="github_pat_…"></label>
+        <label class="row"><input id="rem" type="checkbox" checked> Remember on this device</label>
+        <div class="row"><button class="xl" id="tsave">Save &amp; test</button><button class="xl" id="tclear">Remove token</button></div>
+        <div id="pmsg" role="status"></div>
+        <p class="note">Create a fine-grained token at GitHub &rarr; Settings &rarr; Developer settings, limited to this one repository with Contents: Read and write. It is stored only in this browser and used only to save data.json.</p>
+      </div></details>
     <div class="note">Everything runs in your browser. Your file is not uploaded to any server.</div>
   </div>
 </div>
@@ -92,6 +110,7 @@ body.viewer .admin{display:none}
     <button class="xl admin" id="dlc">Unduh CSV</button>
     <button class="xl admin" id="bexit">Exit admin</button>
     <input id="q" type="search" placeholder="Cari ID, nama, cabang…" aria-label="Cari">
+    <span id="pst"></span>
     <span id="msg" role="alert"></span>
   </div>
   <div id="grid"><table id="tbl"></table><div id="empty" class="hidden"></div></div>
@@ -216,7 +235,7 @@ function generate(S){
 const ADMIN_HASH=''; /* tempel kode SHA-256 passcode Anda di sini */
 /* ---- tampilan seperti Excel ---- */
 const $=id=>document.getElementById(id);
-const esc=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 const fmtN=v=>typeof v==='number'?(v===0?'-':Math.round(v).toLocaleString('en-US')):v;
 const fmtP=v=>typeof v==='number'?(v*100).toFixed(2)+'%':v;
 const colL=n=>{let s='';n++;while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=(n-m-1)/26}return s};
@@ -328,7 +347,7 @@ function processFile(){
       tabsList=d.tabs.concat(['Lampiran']);
       VIEW='Lampiran';sc=-1;FILTER='';$('q').value='';msg('');
       $('up').classList.add('hidden');$('dash').classList.remove('hidden');
-      tabs();render();$('stl').textContent='Data Lampiran berhasil digenerate dari '+FILE;
+      tabs();render();$('stl').textContent='Data Lampiran berhasil digenerate dari '+FILE;publishAuto();
       done();
     };
     w.onerror=ev=>{stop();um.textContent='Processing failed: '+(ev.message||'the worker stopped (possibly out of memory or the XLSX library could not load).');done()};
@@ -365,6 +384,13 @@ document.addEventListener('drop',e=>{e.preventDefault();$('drop').classList.remo
   if(!$('up').classList.contains('hidden'))setFile(e.dataTransfer.files[0])});
 const sha=async t=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t)))].map(b=>b.toString(16).padStart(2,'0')).join('');
 function showOnly(id){['gate','up','dash','nodata'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
+let LAST='';
+async function pollViewer(){
+  try{const r=await fetch('data.json?'+Date.now(),{cache:'no-store'});if(!r.ok)return;
+    const d=await r.json();
+    if(d&&d.rows&&d.rows.length&&d.generatedAt!==LAST){LAST=d.generatedAt;OUT=d.rows;render();
+      $('stl').textContent='Data updated: '+new Date(d.generatedAt).toLocaleString()}}catch(_){}
+}
 async function boot(){
   if(location.hash==='#admin'){
     document.body.classList.remove('viewer');
@@ -373,15 +399,18 @@ async function boot(){
     if(!ADMIN_HASH){$('gt').textContent='Create admin passcode';$('gp').textContent='No passcode is set yet. Choose one and you will get a code to paste into index.html.';$('bpw').textContent='Create'}
     showOnly('gate');$('pw').focus();return}
   document.body.classList.add('viewer');
+  let d;
   try{
     const r=await fetch('data.json?'+Date.now(),{cache:'no-store'});
-    if(!r.ok)throw 0;
-    const d=await r.json();
-    if(!d.rows||!d.rows.length)throw 0;
-    OUT=d.rows;PREV={};tabsList=['Lampiran'];VIEW='Lampiran';
-    showOnly('dash');tabs();render();
-    $('stl').textContent='Data updated: '+new Date(d.generatedAt).toLocaleString();
-  }catch(_){showOnly('nodata')}
+    if(!r.ok){$('nd').textContent='data.json not found (HTTP '+r.status+').';return showOnly('nodata')}
+    d=await r.json();
+  }catch(_){$('nd').textContent='data.json could not be loaded or is not valid JSON.';return showOnly('nodata')}
+  if(!d||!d.rows||!d.rows.length){$('nd').textContent='data.json contains no rows.';return showOnly('nodata')}
+  try{
+    OUT=d.rows;PREV={};LAST=d.generatedAt||'';tabsList=['Lampiran'];VIEW='Lampiran';
+    showOnly('dash');tabs();render();setInterval(pollViewer,120000);
+    $('stl').textContent='Data updated: '+(d.generatedAt?new Date(d.generatedAt).toLocaleString():'');
+  }catch(e){$('nd').textContent='Display error: '+e.message;showOnly('nodata')}
 }
 $('bpw').onclick=async()=>{
   const v=$('pw').value;if(!v)return;
@@ -395,6 +424,7 @@ $('bpw').onclick=async()=>{
 $('pw').onkeydown=e=>{if(e.key==='Enter')$('bpw').click()};
 $('bpub').onclick=()=>{
   if(!OUT.length)return msg('No data to publish.');
+  if(ghCfg().tok)return publishAuto();
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([JSON.stringify({generatedAt:new Date().toISOString(),rows:OUT})],{type:'application/json'}));
   a.download='data.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000);
@@ -402,6 +432,59 @@ $('bpub').onclick=()=>{
 };
 $('bexit').onclick=()=>{try{sessionStorage.removeItem('adm')}catch(_){}location.href=location.pathname};
 window.addEventListener('hashchange',()=>location.reload());
+/* ---- auto-publish ke GitHub (hanya admin) ---- */
+function ghGet(k){try{return localStorage.getItem(k)||sessionStorage.getItem(k)||''}catch(_){return ''}}
+function ghSet(k,v,keep){try{localStorage.removeItem(k);sessionStorage.removeItem(k);(keep?localStorage:sessionStorage).setItem(k,v)}catch(_){}}
+function ghDel(k){try{localStorage.removeItem(k);sessionStorage.removeItem(k)}catch(_){}}
+function guessRepo(){
+  const m=location.hostname.match(/^(.+)\.github\.io$/);if(!m)return '';
+  const seg=location.pathname.split('/').filter(Boolean)[0];
+  return m[1]+'/'+(seg&&!/\.html?$/i.test(seg)?seg:m[1]+'.github.io');
+}
+const ghCfg=()=>({repo:ghGet('gh_repo')||guessRepo(),tok:ghGet('gh_tok')});
+const ghHead=t=>({Authorization:'Bearer '+t,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'});
+async function ghErr(r){
+  let m='';try{m=(await r.json()).message||''}catch(_){}
+  if(r.status===401)return 'Token is invalid or expired.';
+  if(r.status===403||r.status===404)return 'Cannot access this repository with the token (check the repo name and that the token has Contents: Read and write). '+m;
+  return 'GitHub '+r.status+' '+m;
+}
+function refreshPubUI(){const c=ghCfg();$('repo').value=c.repo;$('pubsum').textContent='Auto-publish to GitHub: '+(c.tok?'on ('+c.repo+')':'off')}
+const b64=str=>{const b=new TextEncoder().encode(str);let t='';for(let i=0;i<b.length;i+=32768)t+=String.fromCharCode.apply(null,b.subarray(i,i+32768));return btoa(t)};
+async function autoPublish(){
+  const {repo,tok}=ghCfg(),api='https://api.github.com/repos/'+repo+'/contents/data.json',H=ghHead(tok);
+  $('pst').textContent='Publishing to GitHub…';msg('');
+  let sha;
+  const g=await fetch(api,{headers:H,cache:'no-store'});
+  if(g.ok)sha=(await g.json()).sha;else if(g.status!==404)throw new Error(await ghErr(g));
+  const body={message:'Update dashboard data '+new Date().toISOString(),content:b64(JSON.stringify({generatedAt:new Date().toISOString(),rows:OUT}))};
+  if(sha)body.sha=sha;
+  const r=await fetch(api,{method:'PUT',headers:{...H,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!r.ok)throw new Error(await ghErr(r));
+  $('pst').textContent='Published to GitHub ✓ Visitors will see the new data in about a minute.';
+}
+function publishAuto(){
+  if(!ghCfg().tok){$('pst').textContent='Auto-publish is off. Add a GitHub token on the upload screen, or use Publish data.json.';return}
+  autoPublish().catch(e=>{$('pst').textContent='';msg('Publish failed: '+e.message)});
+}
+$('tsave').onclick=async()=>{
+  const repo=$('repo').value.trim(),tok=$('tok').value.trim()||ghGet('gh_tok'),pm=$('pmsg');
+  pm.style.color='#b00020';
+  if(!/^[\w.-]+\/[\w.-]+$/.test(repo)){pm.textContent='Repository must look like owner/repo.';return}
+  if(!tok){pm.textContent='Paste a GitHub token first.';return}
+  pm.style.color='#555';pm.textContent='Testing…';
+  try{
+    const r=await fetch('https://api.github.com/repos/'+repo,{headers:ghHead(tok)});
+    if(!r.ok)throw new Error(await ghErr(r));
+    const j=await r.json();
+    if(j.permissions&&j.permissions.push===false)throw new Error('The token can read but not write to this repository.');
+    ghSet('gh_repo',repo,true);ghSet('gh_tok',tok,$('rem').checked);$('tok').value='';
+    pm.style.color='#0b6b2f';pm.textContent='Connected ✓ Data will be published automatically after each Process.';
+    refreshPubUI();
+  }catch(e){pm.style.color='#b00020';pm.textContent=e.message}
+};
+$('tclear').onclick=()=>{ghDel('gh_tok');$('tok').value='';$('pmsg').style.color='#555';$('pmsg').textContent='Token removed from this browser.';refreshPubUI()};
+refreshPubUI();
 tabs();render();boot();
 </script>
 </body>
