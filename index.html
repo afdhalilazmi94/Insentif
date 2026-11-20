@@ -54,10 +54,22 @@ td.pv{background:#fff;border-right:1px solid #e1e1e1;border-bottom:1px solid #e1
 #bgo:disabled{opacity:.45;cursor:not-allowed}
 #umsg{color:#b00020;font-size:13px;white-space:pre-line}
 .note{font-size:12px;color:#777}
+#gate,#nodata{height:100%;display:flex;align-items:center;justify-content:center;background:#eef2f7;padding:20px}
+#pw{height:40px;border:1px solid #9fb3cf;border-radius:6px;padding:0 12px;font-size:15px}
+#gmsg{font-size:13px;color:#b00020;line-height:1.5}
+body.viewer .admin{display:none}
 </style>
 </head>
 <body>
-<div id="up">
+<div id="gate" class="hidden"><div class="upc">
+    <h1 id="gt">Admin access</h1>
+    <p id="gp">Enter the admin passcode to upload and publish data.</p>
+    <input id="pw" type="password" autocomplete="current-password" aria-label="Passcode">
+    <button class="xb" id="bpw">Unlock</button>
+    <div id="gmsg" role="alert"></div>
+  </div></div>
+<div id="nodata" class="hidden"><div class="upc"><h1>No data yet</h1><p>The dashboard has not been published. Please check back later.</p></div></div>
+<div id="up" class="hidden">
   <div class="upc">
     <h1>Generator Lampiran</h1>
     <p>Upload your Excel workbook (.xlsx or .xlsm) containing the sheets DP, Dakar, HK 2, Partial and Denda, then click Process.</p>
@@ -74,9 +86,11 @@ td.pv{background:#fff;border-right:1px solid #e1e1e1;border-bottom:1px solid #e1
 <div id="dash" class="hidden">
   <div id="fxbar"><div id="nb">A1</div><div class="fx">fx</div><div id="fv"></div></div>
   <div id="band">
-    <button class="xl" id="bback">&larr; Upload another file</button>
-    <button class="xl" id="dlx">Unduh Excel</button>
-    <button class="xl" id="dlc">Unduh CSV</button>
+    <button class="xl admin" id="bback">&larr; Upload another file</button>
+    <button class="xl admin" id="bpub">Publish data.json</button>
+    <button class="xl admin" id="dlx">Unduh Excel</button>
+    <button class="xl admin" id="dlc">Unduh CSV</button>
+    <button class="xl admin" id="bexit">Exit admin</button>
     <input id="q" type="search" placeholder="Cari ID, nama, cabang…" aria-label="Cari">
     <span id="msg" role="alert"></span>
   </div>
@@ -198,6 +212,8 @@ function generate(S){
 
 </script>
 <script>
+/* ---- akses: pemilik (#admin + passcode) vs pengunjung (hanya dashboard) ---- */
+const ADMIN_HASH=''; /* tempel kode SHA-256 passcode Anda di sini */
 /* ---- tampilan seperti Excel ---- */
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
@@ -347,7 +363,46 @@ document.addEventListener('dragover',e=>{e.preventDefault();if(!$('up').classLis
 document.addEventListener('dragleave',e=>{if(!e.relatedTarget)$('drop').classList.remove('over')});
 document.addEventListener('drop',e=>{e.preventDefault();$('drop').classList.remove('over');
   if(!$('up').classList.contains('hidden'))setFile(e.dataTransfer.files[0])});
-tabs();render();
+const sha=async t=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t)))].map(b=>b.toString(16).padStart(2,'0')).join('');
+function showOnly(id){['gate','up','dash','nodata'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
+async function boot(){
+  if(location.hash==='#admin'){
+    document.body.classList.remove('viewer');
+    let ok=false;try{ok=!!ADMIN_HASH&&sessionStorage.getItem('adm')===ADMIN_HASH}catch(_){}
+    if(ok)return showOnly('up');
+    if(!ADMIN_HASH){$('gt').textContent='Create admin passcode';$('gp').textContent='No passcode is set yet. Choose one and you will get a code to paste into index.html.';$('bpw').textContent='Create'}
+    showOnly('gate');$('pw').focus();return}
+  document.body.classList.add('viewer');
+  try{
+    const r=await fetch('data.json?'+Date.now(),{cache:'no-store'});
+    if(!r.ok)throw 0;
+    const d=await r.json();
+    if(!d.rows||!d.rows.length)throw 0;
+    OUT=d.rows;PREV={};tabsList=['Lampiran'];VIEW='Lampiran';
+    showOnly('dash');tabs();render();
+    $('stl').textContent='Data updated: '+new Date(d.generatedAt).toLocaleString();
+  }catch(_){showOnly('nodata')}
+}
+$('bpw').onclick=async()=>{
+  const v=$('pw').value;if(!v)return;
+  const h=await sha(v);
+  if(!ADMIN_HASH){
+    $('gmsg').innerHTML='Your passcode code (SHA-256):<br><code style="word-break:break-all">'+h+'</code><br>Paste it between the quotes in <b>const ADMIN_HASH=\'\'</b> in index.html and commit. Until you do, #admin is open to anyone.';
+    $('bpw').textContent='Continue';$('bpw').onclick=()=>showOnly('up');return}
+  if(h===ADMIN_HASH){try{sessionStorage.setItem('adm',h)}catch(_){}showOnly('up')}
+  else $('gmsg').textContent='Wrong passcode.';
+};
+$('pw').onkeydown=e=>{if(e.key==='Enter')$('bpw').click()};
+$('bpub').onclick=()=>{
+  if(!OUT.length)return msg('No data to publish.');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify({generatedAt:new Date().toISOString(),rows:OUT})],{type:'application/json'}));
+  a.download='data.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+  msg('data.json downloaded. Add it to your repo next to index.html and commit.');
+};
+$('bexit').onclick=()=>{try{sessionStorage.removeItem('adm')}catch(_){}location.href=location.pathname};
+window.addEventListener('hashchange',()=>location.reload());
+tabs();render();boot();
 </script>
 </body>
 </html>
