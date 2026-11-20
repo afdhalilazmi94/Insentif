@@ -1,123 +1,524 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="antialiased">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Lampiran</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lampiran Insentif CMO — Interactive Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', 'Segoe UI', 'system-ui', '-apple-system', 'sans-serif']
+        }
+      }
+    }
+  };
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
-*{box-sizing:border-box}
-html,body{height:100%;margin:0}
-body{display:flex;flex-direction:column;font:12px Calibri,"Segoe UI",system-ui,sans-serif;color:#1b1b1b;background:#fff;overflow:hidden}
-.hidden{display:none!important}
-#fxbar{display:flex;align-items:center;height:30px;border-bottom:1px solid #d4d4d4;flex:none}
-#nb{width:110px;height:100%;display:flex;align-items:center;padding:0 10px;border-right:1px solid #d4d4d4;font-size:13px}
-.fx{padding:0 12px;font:italic 15px serif;color:#555}
-#fv{flex:1;padding:0 8px;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#band{flex:none;height:62px;display:flex;align-items:center;gap:14px;padding:0 20px 0 66px;border-bottom:1px solid #d4d4d4}
-.xb{background:#2f6fb7;color:#fff;border:1px solid #1f4e8c;border-radius:4px;height:32px;padding:0 26px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.3)}
-.xl{background:#fff;color:#1f4e8c;border:1px solid #1f4e8c;border-radius:4px;height:28px;padding:0 12px;cursor:pointer}
-button:focus-visible,input:focus-visible{outline:2px solid #217346;outline-offset:1px}
-#q{height:28px;width:220px;border:1px solid #bbb;padding:0 8px;border-radius:4px}
-#msg{color:#b00020;font-size:13px}
-#grid{flex:1;overflow:auto;position:relative}
-table{border-collapse:separate;border-spacing:0;table-layout:fixed;width:max-content}
-th,td{height:20px;padding:0 3px;overflow:hidden;white-space:nowrap}
-tr.L th{position:sticky;top:0;z-index:3;background:#f2f2f2;color:#444;font-weight:400;text-align:center;border-right:1px solid #d0d0d0;border-bottom:1px solid #d0d0d0}
-tr.H th{position:sticky;top:20px;z-index:3;height:48px;color:#fff;font-size:11px;font-weight:700;text-align:center;white-space:normal;padding:0 20px 0 3px;border-right:1px solid #fff;border-bottom:1px solid #fff;cursor:pointer}
-th.bl{background:#fff!important;border:0!important;cursor:default!important}
-td.bl{background:#fff}
-.rn{position:sticky;left:0;z-index:2;width:46px;background:#f2f2f2!important;color:#555!important;text-align:center!important;font-weight:400!important;border-right:1px solid #d0d0d0!important;border-bottom:1px solid #d0d0d0!important}
-tr.L th.rn,tr.H th.rn{z-index:5}
-.dd{position:absolute;right:2px;bottom:2px;width:16px;height:16px;background:#f5f5f5;border:1px solid #888;color:#333;font:9px/14px sans-serif;text-align:center}
-td{color:#000;border-right:1px solid #fff;border-bottom:1px solid #fff}
-td.c{text-align:center}td.r{text-align:right}
-td.pv{background:#fff;border-right:1px solid #e1e1e1;border-bottom:1px solid #e1e1e1}
-#empty{position:absolute;top:120px;left:150px;color:#555;font-size:14px;max-width:420px}
-#tabs{flex:none;display:flex;align-items:flex-end;gap:4px;height:34px;padding:0 12px;background:#f3f3f3;border-top:1px solid #d4d4d4;overflow-x:auto}
-.tab{padding:6px 14px;border:0;border-radius:0 0 6px 6px;background:transparent;font-size:14px;color:#222;cursor:pointer;white-space:nowrap}
-.tab.g{background:#a9d86e}
-.tab.on{background:#fff;font-weight:700;color:#217346;box-shadow:inset 0 -2px 0 #217346}
-#st{flex:none;height:24px;display:flex;justify-content:space-between;align-items:center;padding:0 12px;background:#f3f3f3;border-top:1px solid #e0e0e0;color:#444}
-#dash{display:flex;flex-direction:column;height:100%}
-#up{height:100%;display:flex;align-items:center;justify-content:center;background:#eef2f7;overflow:auto;padding:20px}
-.upc{width:min(560px,100%);background:#fff;border:1px solid #cdd6e2;border-radius:10px;padding:28px;display:grid;gap:16px}
-.upc h1{margin:0;font-size:22px;color:#1f3864}
-.upc p{margin:0;color:#555;font-size:14px;line-height:1.5}
-#drop{border:2px dashed #9fb3cf;border-radius:8px;text-align:center;padding:34px 16px;cursor:pointer;display:grid;gap:6px;background:#f8fafd}
-#drop.over{border-color:#1f3864;background:#e8eef9}
-#drop b{font-size:16px;color:#1f3864}#drop span{color:#555;font-size:13px}
-#chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{padding:2px 10px;border-radius:99px;border:1px solid #bbb;font-size:12px}
-.chip.ok{color:#0b6b2f;border-color:#0b6b2f}.chip.no{color:#a11b1b;border-color:#a11b1b}
-#bgo{height:40px;font-size:15px}
-#bgo:disabled{opacity:.45;cursor:not-allowed}
-#umsg{color:#b00020;font-size:13px;white-space:pre-line}
-.note{font-size:12px;color:#777}
-#gate,#nodata{height:100%;display:flex;align-items:center;justify-content:center;background:#eef2f7;padding:20px}
-#pw{height:40px;border:1px solid #9fb3cf;border-radius:6px;padding:0 12px;font-size:15px}
-#gmsg{font-size:13px;color:#b00020;line-height:1.5}
-body.viewer .admin,body.viewer #tabs{display:none}
-#dash{height:100%;height:100dvh}
-#pubset{border:1px solid #cdd6e2;border-radius:8px;padding:10px 12px;font-size:13px}
-#pubset summary{cursor:pointer;font-weight:600;color:#1f3864}
-.pubf{display:grid;gap:10px;margin-top:10px}
-.pubf label{display:grid;gap:4px;color:#333}
-.pubf input[type=text],.pubf input[type=password]{height:36px;border:1px solid #9fb3cf;border-radius:6px;padding:0 10px;font-size:13px}
-.pubf .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-#pst{color:#0b6b2f;font-size:13px}
-#pmsg{font-size:13px;white-space:pre-line}
+  /* Custom scrollbars & sticky table refinements */
+  html, body { height: 100%; margin: 0; font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; }
+  .custom-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+  .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+  .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+  .dark .custom-scroll::-webkit-scrollbar-thumb { background: #475569; }
+  .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+  /* Table sticky positioning & crisp borders */
+  #tbl { border-collapse: separate; border-spacing: 0; width: max-content; }
+  #tbl thead th { position: sticky; top: 0; z-index: 20; }
+  #tbl thead tr.col-letters th { top: 0; height: 24px; z-index: 25; }
+  #tbl thead tr.col-headers th { top: 24px; z-index: 24; }
+  #tbl.no-letters thead tr.col-headers th { top: 0; }
+
+  /* Sticky left columns */
+  .sticky-rn { position: sticky; left: 0; z-index: 15; width: 52px; min-width: 52px; max-width: 52px; }
+  .sticky-act { position: sticky; left: 52px; z-index: 15; width: 42px; min-width: 42px; max-width: 42px; }
+  .sticky-name { position: sticky; left: 94px; z-index: 15; min-width: 190px; max-width: 220px; box-shadow: 4px 0 8px -4px rgba(15,23,42,0.12); }
+  .dark .sticky-name { box-shadow: 4px 0 10px -4px rgba(0,0,0,0.45); }
+  #tbl thead th.sticky-rn, #tbl thead th.sticky-act, #tbl thead th.sticky-name { z-index: 30; }
+
+  /* Row hover highlight */
+  #tbl tbody tr:hover td { filter: brightness(0.965); }
+  .dark #tbl tbody tr:hover td { filter: brightness(1.12); }
+
+  /* Smooth drawer transition */
+  #drawerPanel { transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+  #drawerBackdrop { transition: opacity 0.2s ease; }
+
+  /* Analytics collapse transition */
+  #analyticsWrap { transition: max-height 0.3s ease, opacity 0.25s ease; overflow: hidden; }
 </style>
 </head>
-<body>
-<div id="gate" class="hidden"><div class="upc">
-    <h1 id="gt">Admin access</h1>
-    <p id="gp">Enter the admin passcode to upload and publish data.</p>
-    <input id="pw" type="password" autocomplete="current-password" aria-label="Passcode">
-    <button class="xb" id="bpw">Unlock</button>
-    <div id="gmsg" role="alert"></div>
-  </div></div>
-<div id="nodata" class="hidden"><div class="upc"><h1>No data yet</h1><p>The dashboard has not been published. Please check back later.</p><p class="note" id="nd"></p></div></div>
-<div id="up" class="hidden">
-  <div class="upc">
-    <h1>Generator Lampiran</h1>
-    <p>Upload your Excel workbook (.xlsx or .xlsm) containing the sheets DP, Dakar, HK 2, Partial and Denda, then click Process.</p>
-    <div id="drop" tabindex="0" role="button" aria-label="Choose Excel file">
-      <b>Drop your file here, or click to browse</b>
-      <span id="fn">No file selected</span>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 h-full overflow-hidden flex flex-col">
+
+<!-- ==================== TOAST NOTIFICATION ==================== -->
+<div id="toast" class="fixed bottom-5 right-5 z-[100] pointer-events-none opacity-0 translate-y-2 transition-all duration-200">
+  <div id="toastInner" class="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-medium px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2">
+    <span id="toastText"></span>
+  </div>
+</div>
+
+<!-- ==================== ADMIN PASSCODE GATE (#admin) ==================== -->
+<div id="gate" class="hidden flex-1 flex items-center justify-center bg-slate-100 dark:bg-slate-950 p-4 overflow-auto">
+  <div class="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-7 space-y-5">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl bg-blue-600/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+      </div>
+      <div>
+        <h1 id="gt" class="text-lg font-bold text-slate-900 dark:text-white">Admin Access</h1>
+        <p id="gp" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Masukkan passcode admin untuk mengunggah dan mempublikasikan data.</p>
+      </div>
     </div>
-    <div id="chips"></div>
-    <button class="xb" id="bgo" disabled>Process</button>
-    <div id="umsg" role="alert"></div>
-    <details id="pubset"><summary id="pubsum">Auto-publish to GitHub: off</summary>
-      <div class="pubf">
-        <label>Repository (owner/repo)<input id="repo" type="text" autocomplete="off"></label>
-        <label>GitHub token<input id="tok" type="password" autocomplete="off" placeholder="github_pat_…"></label>
-        <label class="row"><input id="rem" type="checkbox" checked> Remember on this device</label>
-        <div class="row"><button class="xl" id="tsave">Save &amp; test</button><button class="xl" id="tclear">Remove token</button></div>
-        <div id="pmsg" role="status"></div>
-        <p class="note">Create a fine-grained token at GitHub &rarr; Settings &rarr; Developer settings, limited to this one repository with Contents: Read and write. It is stored only in this browser and used only to save data.json.</p>
-      </div></details>
-    <div class="note">Everything runs in your browser. Your file is not uploaded to any server.</div>
+    <div class="space-y-3">
+      <input id="pw" type="password" autocomplete="current-password" placeholder="Masukkan passcode…" aria-label="Passcode"
+        class="w-full h-11 px-3.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <button id="bpw" class="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm shadow-sm transition cursor-pointer">
+        Unlock
+      </button>
+    </div>
+    <div id="gmsg" role="alert" class="text-xs text-rose-600 dark:text-rose-400 leading-relaxed"></div>
+    <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center text-xs text-slate-500">
+      <span>Protected by SHA-256</span>
+      <a href="#" id="gateBack" class="text-blue-600 dark:text-blue-400 hover:underline font-medium">Kembali ke Viewer</a>
+    </div>
   </div>
 </div>
-<div id="dash" class="hidden">
-  <div id="fxbar"><div id="nb">A1</div><div class="fx">fx</div><div id="fv"></div></div>
-  <div id="band">
-    <button class="xl admin" id="bback">&larr; Upload another file</button>
-    <button class="xl admin" id="bpub">Publish data.json</button>
-    <button class="xl admin" id="dlx">Unduh Excel</button>
-    <button class="xl admin" id="dlc">Unduh CSV</button>
-    <button class="xl admin" id="bexit">Exit admin</button>
-    <input id="q" type="search" placeholder="Cari ID, nama, cabang…" aria-label="Cari">
-    <span id="pst"></span>
-    <span id="msg" role="alert"></span>
+
+<!-- ==================== NO DATA FALLBACK (Production if Demo Disabled) ==================== -->
+<div id="nodata" class="hidden flex-1 flex items-center justify-center bg-slate-100 dark:bg-slate-950 p-4">
+  <div class="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-7 text-center space-y-4">
+    <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-500 mx-auto flex items-center justify-center">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+    </div>
+    <h1 class="text-lg font-bold">Belum Ada Data</h1>
+    <p class="text-sm text-slate-500 dark:text-slate-400">Dashboard belum dipublikasikan. Silakan coba lagi nanti.</p>
+    <p id="nd" class="text-xs text-slate-400 font-mono"></p>
   </div>
-  <div id="grid"><table id="tbl"></table><div id="empty" class="hidden"></div></div>
-  <div id="tabs"></div>
-  <div id="st"><span id="stl">Ready</span><span id="str"></span></div>
 </div>
+
+<!-- ==================== ADMIN UPLOAD & GITHUB AUTO-PUBLISH VIEW ==================== -->
+<div id="up" class="hidden flex-1 overflow-y-auto custom-scroll bg-slate-50 dark:bg-slate-950 p-4 sm:p-8">
+  <div class="max-w-2xl mx-auto space-y-5">
+    <!-- Top action row -->
+    <div class="flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-slate-900 dark:text-white leading-tight">Generator Lampiran</h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Unggah workbook Excel untuk memproses insentif CMO</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="upToDash" class="hidden px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 transition cursor-pointer flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+          Kembali ke Dashboard
+        </button>
+        <button class="theme-toggle p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer" aria-label="Ganti Tema"></button>
+      </div>
+    </div>
+
+    <!-- Main Upload Card -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6 space-y-5">
+      <div class="space-y-1.5">
+        <p class="text-sm text-slate-600 dark:text-slate-300">
+          Pilih file Excel (<code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-xs font-semibold">.xlsx</code> atau <code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-xs font-semibold">.xlsm</code>) yang berisi 5 sheet wajib berikut:
+        </p>
+        <div id="reqPills" class="flex flex-wrap gap-2 pt-1">
+          <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">DP</span>
+          <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">Dakar</span>
+          <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">HK 2</span>
+          <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">Partial</span>
+          <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">Denda</span>
+        </div>
+      </div>
+
+      <!-- Drop Zone -->
+      <div id="drop" tabindex="0" role="button" aria-label="Choose Excel file"
+        class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 rounded-2xl p-8 text-center cursor-pointer transition bg-slate-50/70 dark:bg-slate-800/40 flex flex-col items-center gap-2">
+        <div class="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-1">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+        </div>
+        <b class="text-sm sm:text-base font-semibold text-slate-800 dark:text-slate-100">Seret &amp; letakkan file Excel di sini, atau klik untuk memilih</b>
+        <span id="fn" class="text-xs text-slate-500 dark:text-slate-400">Belum ada file dipilih</span>
+      </div>
+
+      <!-- Validation chips & progress -->
+      <div id="chips" class="flex flex-wrap gap-2 empty:hidden"></div>
+
+      <div id="procBar" class="hidden space-y-1.5">
+        <div class="flex items-center justify-between text-xs font-medium text-blue-600 dark:text-blue-400">
+          <span id="procText" class="flex items-center gap-2">
+            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+            Memproses…
+          </span>
+        </div>
+        <div class="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+          <div class="h-full bg-blue-600 rounded-full animate-pulse w-2/3"></div>
+        </div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-2.5">
+        <button id="bgo" disabled
+          class="flex-1 h-11 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-sm transition cursor-pointer">
+          Process Workbook
+        </button>
+        <button id="bLoadDemo" class="h-11 px-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition cursor-pointer">
+          Muat Data Demo
+        </button>
+      </div>
+
+      <div id="umsg" role="alert" class="text-xs text-rose-600 dark:text-rose-400 whitespace-pre-line empty:hidden bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-xl p-3"></div>
+
+      <!-- GitHub Auto-Publish Settings -->
+      <details id="pubset" class="border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/70 dark:bg-slate-800/30">
+        <summary id="pubsum" class="px-4 py-3 cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-200 select-none flex items-center justify-between">
+          <span>Auto-publish to GitHub: off</span>
+        </summary>
+        <div class="px-4 pb-4 pt-1 space-y-3 border-t border-slate-200/70 dark:border-slate-800">
+          <label class="block space-y-1">
+            <span class="text-xs font-medium text-slate-600 dark:text-slate-300">Repository (owner/repo)</span>
+            <input id="repo" type="text" autocomplete="off" placeholder="username/nama-repo"
+              class="w-full h-9 px-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </label>
+          <label class="block space-y-1">
+            <span class="text-xs font-medium text-slate-600 dark:text-slate-300">GitHub Fine-Grained Token</span>
+            <input id="tok" type="password" autocomplete="off" placeholder="github_pat_…"
+              class="w-full h-9 px-3 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </label>
+          <label class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 cursor-pointer">
+            <input id="rem" type="checkbox" checked class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+            Ingat token di browser ini
+          </label>
+          <div class="flex flex-wrap gap-2">
+            <button id="tsave" class="px-3.5 py-2 rounded-lg bg-slate-900 dark:bg-blue-600 hover:bg-slate-800 dark:hover:bg-blue-700 text-white text-xs font-semibold transition cursor-pointer">Save &amp; Test</button>
+            <button id="tclear" class="px-3.5 py-2 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold transition cursor-pointer">Remove Token</button>
+          </div>
+          <div id="pmsg" role="status" class="text-xs whitespace-pre-line"></div>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+            Buat fine-grained token di GitHub &rarr; Settings &rarr; Developer settings, batasi hanya untuk repositori ini dengan izin <b>Contents: Read and write</b>. Token disimpan secara lokal di browser ini dan hanya digunakan untuk menyimpan <code class="font-mono">data.json</code>.
+          </p>
+        </div>
+      </details>
+
+      <div class="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+        <svg class="w-4 h-4 text-emerald-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        Semua pemrosesan Excel berjalan 100% di browser Anda melalui Web Worker. File tidak dikirim ke server eksternal.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MAIN EXECUTIVE DASHBOARD ==================== -->
+<div id="dash" class="hidden flex-1 flex flex-col min-h-0 overflow-hidden">
+
+  <!-- TOP NAVIGATION BAR -->
+  <header class="flex-none bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2.5 z-30">
+    <!-- Left: Brand & Status -->
+    <div class="flex items-center gap-2.5 min-w-0">
+      <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-sm shrink-0">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      </div>
+      <div class="min-w-0">
+        <div class="flex items-center gap-2">
+          <h1 class="text-sm sm:text-base font-bold tracking-tight text-slate-900 dark:text-white truncate">Lampiran Insentif CMO</h1>
+          <span id="demoBadge" class="hidden px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800 whitespace-nowrap">Demo Mode</span>
+          <span id="liveBadge" class="hidden px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap">Live Data</span>
+        </div>
+        <div id="stl" class="text-[11px] text-slate-500 dark:text-slate-400 truncate">Ready</div>
+      </div>
+    </div>
+
+    <!-- Right: Mode Switcher, Actions, Export, Theme -->
+    <div class="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+      <!-- Status / Publish Messages -->
+      <span id="pst" class="text-xs font-medium text-emerald-600 dark:text-emerald-400 hidden sm:inline"></span>
+      <span id="msg" role="alert" class="text-xs font-medium text-rose-600 dark:text-rose-400"></span>
+
+      <!-- Demo/Admin Mode Switcher -->
+      <div id="modeSwitch" class="hidden items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200 dark:border-slate-700">
+        <button id="swViewer" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm transition cursor-pointer">Viewer Mode</button>
+        <button id="swAdmin" class="px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition cursor-pointer">Admin Upload</button>
+      </div>
+
+      <!-- Admin-only actions -->
+      <button id="bback" class="admin-only hidden px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition cursor-pointer">
+        &uarr; Upload Excel
+      </button>
+      <button id="bpub" class="admin-only hidden px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition cursor-pointer">
+        Publish data.json
+      </button>
+
+      <!-- Export Dropdown -->
+      <div class="relative" id="expWrap">
+        <button id="expBtn" class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 transition cursor-pointer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          <span>Ekspor</span>
+          <svg class="w-3 h-3 opacity-60" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div id="expMenu" class="hidden absolute right-0 mt-1.5 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl py-1.5 z-50 text-xs">
+          <div class="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Excel (.xlsx)</div>
+          <button id="dlxFiltered" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer">
+            <span>Unduh Data Terfilter</span>
+            <span class="text-[10px] text-emerald-600 font-semibold">XLSX</span>
+          </button>
+          <button id="dlxAll" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer">
+            <span>Unduh Semua Data</span>
+            <span class="text-[10px] text-slate-400 font-semibold">XLSX</span>
+          </button>
+          <div class="my-1 border-t border-slate-100 dark:border-slate-800"></div>
+          <div class="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">CSV (.csv)</div>
+          <button id="dlcFiltered" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer">
+            <span>Unduh Data Terfilter</span>
+            <span class="text-[10px] text-blue-600 font-semibold">CSV</span>
+          </button>
+          <button id="dlcAll" class="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-between cursor-pointer">
+            <span>Unduh Semua Data</span>
+            <span class="text-[10px] text-slate-400 font-semibold">CSV</span>
+          </button>
+        </div>
+      </div>
+
+      <button id="bexit" class="admin-real-only hidden px-2.5 py-1.5 rounded-xl border border-rose-200 dark:border-rose-900 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-semibold transition cursor-pointer">
+        Exit Admin
+      </button>
+
+      <!-- Theme Toggle -->
+      <button class="theme-toggle p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer" aria-label="Ganti Tema"></button>
+    </div>
+  </header>
+
+  <!-- EXECUTIVE SUMMARY & CONTROLS WRAPPER (Hidden when viewing raw sheet preview tabs) -->
+  <div id="execHeader" class="flex-none bg-slate-50/90 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 px-3 sm:px-5 py-3 space-y-3">
+
+    <!-- 5 DYNAMIC KPI CARDS -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+      <!-- KPI 1: Total CMO -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl p-3 shadow-xs">
+        <div class="flex items-center justify-between text-[11px] font-medium text-slate-500 dark:text-slate-400">
+          <span>Total CMO</span>
+          <span class="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          </span>
+        </div>
+        <div id="kpiCmo" class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-1">0</div>
+        <div id="kpiCmoSub" class="text-[11px] text-slate-400 truncate">dari 0 total CMO</div>
+      </div>
+
+      <!-- KPI 2: Total Insentif All -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl p-3 shadow-xs">
+        <div class="flex items-center justify-between text-[11px] font-medium text-slate-500 dark:text-slate-400">
+          <span>Total Insentif All</span>
+          <span class="w-6 h-6 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </span>
+        </div>
+        <div id="kpiTot" class="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1 truncate">Rp 0</div>
+        <div id="kpiTotSub" class="text-[11px] text-slate-400 truncate">Rata-rata: Rp 0 / CMO</div>
+      </div>
+
+      <!-- KPI 3: Rata-rata Achievement -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl p-3 shadow-xs">
+        <div class="flex items-center justify-between text-[11px] font-medium text-slate-500 dark:text-slate-400">
+          <span>Rata-rata Achievement</span>
+          <span class="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+          </span>
+        </div>
+        <div class="flex items-baseline gap-2 mt-1">
+          <span id="kpiAch" class="text-lg sm:text-xl font-bold">0%</span>
+          <span id="kpiAchBadge" class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full"></span>
+        </div>
+        <div id="kpiAchSub" class="text-[11px] text-slate-400 truncate">0 CMO capai &ge; 100%</div>
+      </div>
+
+      <!-- KPI 4: Selesai / Bahan Assign -->
+      <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl p-3 shadow-xs">
+        <div class="flex items-center justify-between text-[11px] font-medium text-slate-500 dark:text-slate-400">
+          <span>Selesai / Bahan Assign</span>
+          <span class="w-6 h-6 rounded-lg bg-cyan-50 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400 flex items-center justify-center">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          </span>
+        </div>
+        <div id="kpiAssign" class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-1 truncate">0 / 0</div>
+        <div id="kpiAssignSub" class="text-[11px] text-slate-400 truncate">Overall AR CO: 0.00%</div>
+      </div>
+
+      <!-- KPI 5: Insentif Tertinggi -->
+      <div class="col-span-2 sm:col-span-1 bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-xl p-3 shadow-xs">
+        <div class="flex items-center justify-between text-[11px] font-medium text-slate-500 dark:text-slate-400">
+          <span>Top Performer</span>
+          <span class="w-6 h-6 rounded-lg bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+          </span>
+        </div>
+        <div id="kpiTopVal" class="text-lg sm:text-xl font-bold text-amber-600 dark:text-amber-400 mt-1 truncate">Rp 0</div>
+        <div id="kpiTopName" class="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate">-</div>
+      </div>
+    </div>
+
+    <!-- COLLAPSIBLE ANALYTICS & CHARTS PANEL -->
+    <div id="analyticsWrap" class="max-h-0 opacity-0">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 pt-1">
+        <!-- Chart 1: Bar Chart -->
+        <div class="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 shadow-xs">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h3 id="barChartTitle" class="text-xs font-bold text-slate-800 dark:text-slate-100">Total Insentif per Wilayah</h3>
+              <p class="text-[11px] text-slate-400">Klik batang grafik untuk memfilter tabel</p>
+            </div>
+            <span id="barHint" class="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 font-medium">Interaktif</span>
+          </div>
+          <div class="h-44 relative"><canvas id="chartWilayah"></canvas></div>
+        </div>
+
+        <!-- Chart 2: Doughnut Chart -->
+        <div class="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 shadow-xs">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h3 class="text-xs font-bold text-slate-800 dark:text-slate-100">Distribusi Achievement CMO</h3>
+              <p class="text-[11px] text-slate-400">Klik segmen untuk filter kategori achievement</p>
+            </div>
+            <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 font-medium">4 Kategori</span>
+          </div>
+          <div class="h-44 relative"><canvas id="chartAch"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SMART FILTER BAR -->
+    <div class="flex flex-wrap items-center gap-2">
+      <!-- Search -->
+      <div class="relative flex-1 min-w-[200px] max-w-xs">
+        <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <input id="q" type="search" placeholder="Cari ID, NPK, nama, cabang…" aria-label="Cari"
+          class="w-full h-9 pl-9 pr-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500">
+      </div>
+
+      <!-- Wilayah Dropdown -->
+      <select id="fWil" aria-label="Filter Wilayah" class="h-9 px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+        <option value="">Semua Wilayah</option>
+      </select>
+
+      <!-- Cluster Dropdown -->
+      <select id="fClu" aria-label="Filter Cluster" class="h-9 px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+        <option value="">Semua Cluster</option>
+      </select>
+
+      <!-- Cabang Dropdown -->
+      <select id="fCab" aria-label="Filter Cabang" class="h-9 px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer max-w-[170px]">
+        <option value="">Semua Cabang</option>
+      </select>
+
+      <!-- Achievement Status Dropdown -->
+      <select id="fAch" aria-label="Filter Status Achievement" class="h-9 px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+        <option value="">Semua Achievement</option>
+        <option value="gte110">&ge; 110% (Istimewa)</option>
+        <option value="100_110">100% – 109.9% (Tercapai)</option>
+        <option value="gte100">&ge; 100% (Semua Tercapai)</option>
+        <option value="90_100">90% – 99.9% (Mendekati)</option>
+        <option value="lt90">&lt; 90% (Perlu Perhatian)</option>
+      </select>
+
+      <!-- Reset Filter Button -->
+      <button id="bReset" class="hidden h-9 px-3 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+        <span>Reset</span>
+        <span id="fBadge" class="px-1.5 py-0.2 rounded-full bg-rose-600 text-white text-[10px]">0</span>
+      </button>
+
+      <!-- Spacer -->
+      <div class="flex-1 hidden xl:block"></div>
+
+      <!-- Toggle Analytics Button -->
+      <button id="bCharts" class="h-9 px-3 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/70 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+        <span>Analytics &amp; Charts</span>
+        <svg id="bChartsChev" class="w-3.5 h-3.5 transition-transform duration-200" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+      </button>
+    </div>
+
+    <!-- COLUMN PRESET & GROUP VISIBILITY CHIPS -->
+    <div class="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+      <div class="flex flex-wrap items-center gap-1.5">
+        <div class="inline-flex bg-slate-200/70 dark:bg-slate-800 p-0.5 rounded-lg mr-1">
+          <button id="preExec" class="px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer">Ringkas (Executive)</button>
+          <button id="preFull" class="px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer">Lengkap (53 Kolom)</button>
+        </div>
+        <div id="groupChips" class="flex flex-wrap items-center gap-1"></div>
+      </div>
+
+      <!-- Compact Cell Inspector (fx bar) -->
+      <div class="hidden md:flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-2 py-1 text-[11px] max-w-xs">
+        <span id="nb" class="font-mono font-semibold text-blue-600 dark:text-blue-400 min-w-[34px]">C5</span>
+        <span class="text-slate-300 dark:text-slate-700">|</span>
+        <span class="italic font-serif text-slate-400">fx</span>
+        <span id="fv" class="text-slate-600 dark:text-slate-300 truncate max-w-[180px]">Klik sel untuk inspeksi nilai</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- INTERACTIVE DATA TABLE CONTAINER -->
+  <div id="grid" class="flex-1 overflow-auto custom-scroll relative bg-white dark:bg-slate-900">
+    <table id="tbl" class="text-xs"></table>
+    <div id="empty" class="hidden absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
+      <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center mb-3">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      </div>
+      <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">Tidak ada data CMO yang cocok</p>
+      <p class="text-xs text-slate-400 mt-1">Coba ubah kata kunci pencarian atau reset filter aktif.</p>
+    </div>
+  </div>
+
+  <!-- BOTTOM SHEET TABS (Visible when Excel workbook is uploaded) & STATUS BAR -->
+  <footer class="flex-none bg-slate-100 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between px-3 py-1.5 gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+    <div id="tabs" class="flex items-center gap-1 overflow-x-auto"></div>
+    <div id="str" class="font-medium text-slate-600 dark:text-slate-300 ml-auto"></div>
+  </footer>
+</div>
+
+<!-- ==================== SLIDE-OVER CMO DETAIL DRAWER ==================== -->
+<div id="drawer" class="fixed inset-0 z-50 hidden">
+  <div id="drawerBackdrop" class="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] opacity-0"></div>
+  <aside id="drawerPanel" class="absolute right-0 top-0 bottom-0 w-full max-w-xl bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl translate-x-full flex flex-col">
+    <!-- Drawer Header -->
+    <div class="flex-none px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-start justify-between gap-3">
+      <div class="min-w-0">
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">Rincian Insentif CMO</span>
+          <span id="drPeriod" class="text-xs text-slate-400 font-medium"></span>
+        </div>
+        <h2 id="drName" class="text-lg font-bold text-slate-900 dark:text-white mt-1 truncate">-</h2>
+        <p id="drMeta" class="text-xs text-slate-500 dark:text-slate-400 truncate">-</p>
+      </div>
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button id="drCopy" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 transition cursor-pointer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+          Salin Ringkasan
+        </button>
+        <button id="drClose" aria-label="Tutup" class="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 transition cursor-pointer">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Drawer Body -->
+    <div id="drBody" class="flex-1 overflow-y-auto custom-scroll p-5 space-y-5"></div>
+  </aside>
+</div>
+
 <input id="file" type="file" accept=".xlsx,.xlsm,.xls" class="hidden">
+
+<!-- ==================== PRESERVED CORE EXCEL & CALCULATION ENGINE (WEB WORKER COMPATIBLE) ==================== -->
 <script id="core">
 const REQ=['DP','Dakar','HK 2','Partial','Denda'];
 const MON=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
@@ -227,71 +628,771 @@ function generate(S){
   }
   return rows;
 }
-
-
 </script>
+
+<!-- ==================== INTERACTIVE DASHBOARD & APP CONTROLLER ==================== -->
 <script>
-/* ---- akses: pemilik (#admin + passcode) vs pengunjung (hanya dashboard) ---- */
-const ADMIN_HASH=''; /* tempel kode SHA-256 passcode Anda di sini */
-/* ---- tampilan seperti Excel ---- */
-const $=id=>document.getElementById(id);
-const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
-const fmtN=v=>typeof v==='number'?(v===0?'-':Math.round(v).toLocaleString('en-US')):v;
-const fmtP=v=>typeof v==='number'?(v*100).toFixed(2)+'%':v;
-const colL=n=>{let s='';n++;while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=(n-m-1)/26}return s};
-const IDXW=new Set([...PCT].filter(i=>![15,16,17].includes(i)));
-const WID=i=>i<2?68:i===3?158:i===7?200:i===8?187:IDXW.has(i)?75:103;
-const ST=new Set([0,11,13,18,24,30,36,42,48,51,52]),EN=new Set([10,12,17,23,29,35,41,47,50,51,52]);
-let PREV={},VIEW='Lampiran',FILE='',FILTER='',sc=-1,sd=1,tabsList=['Lampiran'];
-const isReq=n=>REQ.some(r=>r.toLowerCase()===n.trim().toLowerCase());
-const msg=t=>{$('msg').textContent=t||''};
-const lettersRow=n=>'<tr class="L"><th class="rn"></th>'+Array.from({length:n},(_,i)=>`<th>${colL(i)}</th>`).join('')+'</tr>';
-function edge(i,c){return(ST.has(i)?`border-left:2px solid ${c};`:'')+(EN.has(i)?`border-right:2px solid ${c};`:'')}
+/* ---- Akses Admin: tempel SHA-256 passcode Anda di sini untuk produksi ---- */
+const ADMIN_HASH = '';
 
-function render(){
-  const g=$('tbl');
-  if(VIEW!=='Lampiran'){$('empty').classList.add('hidden');return preview(g)}
-  let h='<colgroup><col style="width:46px"><col style="width:68px"><col style="width:68px">'+HEAD.map((_,i)=>`<col style="width:${WID(i)}px">`).join('')+'</colgroup>';
-  h+='<thead>'+lettersRow(55)+'<tr class="H"><th class="rn">4</th><th class="bl"></th><th class="bl"></th>'+
-    HEAD.map((t,i)=>{const c=colorOf(i)[0];
-      return `<th data-s="${i}" data-a="${colL(i+2)}4" data-v="${esc(t)}" style="background:${c};${edge(i,c)}">${esc(t)}<i class="dd">${sc===i?(sd>0?'▲':'▼'):'▾'}</i></th>`}).join('')+'</tr></thead><tbody>';
-  let items=OUT.map((r,i)=>({r,n:i+5}));
-  const f=FILTER.trim().toUpperCase();
-  if(f)items=items.filter(o=>o.r.slice(0,11).some(v=>String(v).toUpperCase().includes(f)));
-  if(sc>=0)items.sort((a,b)=>{const x=a.r[sc],y=b.r[sc];
-    return((typeof x==='number'&&typeof y==='number')?x-y:String(x).localeCompare(String(y),undefined,{numeric:true}))*sd});
-  for(const {r,n} of items){
-    h+=`<tr><td class="rn">${n}</td><td class="bl"></td><td class="bl"></td>`;
-    r.forEach((v,i)=>{const [hc,bg]=colorOf(i);
-      const al=(i<=2||PCT.has(i))?'c':(typeof v==='number'?'r':'');
-      const t=PCT.has(i)?fmtP(v):NUM.has(i)?fmtN(v):v;
-      h+=`<td class="${al}" data-a="${colL(i+2)}${n}" data-v="${esc(v)}" style="background:${bg};${edge(i,hc)}${i===52?'font-weight:700;':''}">${esc(t)}</td>`});
-    h+='</tr>'}
-  g.innerHTML=h+'</tbody>';
-  $('empty').classList.toggle('hidden',OUT.length>0);
-  const tot=OUT.reduce((a,r)=>a+(+r[52]||0),0);
-  $('str').textContent=OUT.length?`${items.length} dari ${OUT.length} baris · Total insentif all: ${Math.round(tot).toLocaleString('en-US')}`:(FILE||'');
-}
-function preview(g){
-  const a=PREV[VIEW]||[];
-  const nc=Math.min(60,Math.max(8,...a.map(r=>r.length)));
-  let h='<colgroup><col style="width:46px">'+'<col style="width:100px">'.repeat(nc)+'</colgroup><thead>'+lettersRow(nc)+'</thead><tbody>';
-  a.forEach((r,i)=>{h+=`<tr><td class="rn">${i+1}</td>`;
-    for(let c=0;c<nc;c++){const v=r[c];h+=`<td class="pv" data-a="${colL(c)}${i+1}" data-v="${esc(v==null?'':v)}">${esc(v instanceof Date?v.toISOString().slice(0,10):(v==null?'':v))}</td>`}
-    h+='</tr>'});
-  g.innerHTML=h+'</tbody>';
-  $('str').textContent=`${VIEW} · pratinjau ${a.length} baris pertama`;
-}
-function tabs(){$('tabs').innerHTML=tabsList.map(n=>`<button class="tab ${isReq(n)?'g ':''}${n===VIEW?'on':''}" data-t="${esc(n)}">${esc(n)}</button>`).join('')}
+/* ---- Helpers ---- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const fmtN = v => typeof v === 'number' ? (v === 0 ? '-' : Math.round(v).toLocaleString('id-ID')) : v;
+const fmtRp = v => 'Rp ' + Math.round(Number(v) || 0).toLocaleString('id-ID');
+const fmtP = v => typeof v === 'number' ? (v * 100).toFixed(2) + '%' : v;
+const colL = n => { let s = ''; n++; while (n > 0) { const m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = (n - m - 1) / 26; } return s; };
+const isReq = n => REQ.some(r => r.toLowerCase() === n.trim().toLowerCase());
+const msg = t => { $('msg').textContent = t || ''; };
 
-let PICK=null;
-function setFile(f){
-  if(!f)return;
-  if(!/\.(xlsx|xlsm|xls)$/i.test(f.name)){$('umsg').textContent='Please choose an .xlsx or .xlsm file.';return}
-  PICK=f;$('fn').textContent=f.name+' ('+(f.size/1048576).toFixed(1)+' MB)';
-  $('umsg').textContent='';$('chips').innerHTML='';$('bgo').disabled=false;
+/* ---- Toast helper (replaces alert) ---- */
+let toastTimer = null;
+function showToast(text) {
+  $('toastText').textContent = text;
+  const el = $('toast');
+  el.classList.remove('opacity-0', 'translate-y-2');
+  el.classList.add('opacity-100', 'translate-y-0');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    el.classList.add('opacity-0', 'translate-y-2');
+    el.classList.remove('opacity-100', 'translate-y-0');
+  }, 2600);
 }
-const WORK=`
+
+/* ---- Column Groups & Presets ---- */
+const COL_GROUPS = [
+  { id: 'id',    label: 'Identitas',       cols: [0,1,2,3,4,5,6,7,8,9,10], color: '#1f3864' },
+  { id: 'perf',  label: 'Beban & Assign',  cols: [11,12,13,14,15,16,17],   color: '#00708c' },
+  { id: 'lt1',   label: 'LT 1',            cols: [18,19,20,21,22,23],      color: '#2f5496' },
+  { id: 'lt2',   label: 'LT 2',            cols: [24,25,26,27,28,29],      color: '#38761d' },
+  { id: 'lt3',   label: 'LT 3',            cols: [30,31,32,33,34,35],      color: '#c55a11' },
+  { id: 'lt4',   label: 'LT 4',            cols: [36,37,38,39,40,41],      color: '#7030a0' },
+  { id: 'lt5',   label: 'LT 5',            cols: [42,43,44,45,46,47],      color: '#008080' },
+  { id: 'sum',   label: 'Ringkasan Insentif', cols: [48,49,50,51,52],      color: '#006100' }
+];
+
+/* Executive preset shows key decision-maker columns */
+const EXEC_COLS = new Set([2, 3, 5, 7, 8, 13, 14, 15, 17, 50, 51, 52]);
+
+/* ---- App State ---- */
+let PREV = {}, VIEW = 'Lampiran', FILE = '', tabsList = ['Lampiran'];
+let IS_DEMO = false, IS_REAL_ADMIN = false, LAST = '';
+let PRESET = 'exec'; // 'exec' | 'full' | 'custom'
+let ACTIVE_GROUPS = new Set(['id', 'perf', 'sum']);
+let FILTER = { q: '', wil: '', clu: '', cab: '', ach: '' };
+let sc = 52, sd = -1; // Default sort: Insentif All descending
+let CHARTS_OPEN = false;
+let chartWilInst = null, chartAchInst = null;
+let CURRENT_FILTERED = [];
+let ACTIVE_DRAWER_ROW = null;
+
+/* ---- Realistic Indonesian Demo Dataset Generator (22 CMO rows across 4 Wilayah) ---- */
+function buildDemoRows() {
+  const specs = [
+    // JAWA BARAT
+    { wil:'JAWA BARAT', clu:'JABAR BARAT', kd:'101', cab:'BEKASI', npk:'20190412', nama:'ANDI PRATAMA WIJAYA', bebanT:2, bebanNT:1, bahan:145, ar:1.095, lt:[[6,1],[8,2],[5,1],[3,0],[1,0]], denda:350000 },
+    { wil:'JAWA BARAT', clu:'JABAR BARAT', kd:'102', cab:'BOGOR', npk:'20200815', nama:'SITI NURHALIZA PUTRI', bebanT:1, bebanNT:0, bahan:132, ar:1.038, lt:[[5,0],[6,1],[4,1],[2,1],[1,0]], denda:275000 },
+    { wil:'JAWA BARAT', clu:'JABAR BARAT', kd:'103', cab:'DEPOK', npk:'20210203', nama:'BUDI SANTOSO', bebanT:4, bebanNT:2, bahan:118, ar:0.892, lt:[[3,0],[4,1],[2,0],[1,0],[0,0]], denda:125000 },
+    { wil:'JAWA BARAT', clu:'JABAR TENGAH', kd:'104', cab:'BANDUNG TIMUR', npk:'20181122', nama:'DEWI LESTARI', bebanT:0, bebanNT:1, bahan:160, ar:1.132, lt:[[8,2],[7,2],[6,1],[4,1],[2,0]], denda:450000 },
+    { wil:'JAWA BARAT', clu:'JABAR TENGAH', kd:'105', cab:'KARAWANG', npk:'20210619', nama:'RIZKY MAULANA', bebanT:3, bebanNT:1, bahan:128, ar:0.968, lt:[[4,1],[5,1],[3,0],[2,0],[1,0]], denda:200000 },
+    { wil:'JAWA BARAT', clu:'JABAR TIMUR', kd:'106', cab:'CIREBON', npk:'20220110', nama:'HENDRA GUNAWAN', bebanT:2, bebanNT:0, bahan:112, ar:0.845, lt:[[2,1],[3,0],[2,1],[1,0],[0,0]], denda:100000 },
+
+    // JAWA TENGAH
+    { wil:'JAWA TENGAH', clu:'JATENG UTARA', kd:'201', cab:'SEMARANG', npk:'20190704', nama:'AGUS SETIAWAN', bebanT:1, bebanNT:0, bahan:152, ar:1.072, lt:[[7,1],[6,2],[5,1],[3,1],[1,0]], denda:350000 },
+    { wil:'JAWA TENGAH', clu:'JATENG UTARA', kd:'202', cab:'PEKALONGAN', npk:'20200318', nama:'RATNA SARI DEWI', bebanT:2, bebanNT:1, bahan:124, ar:0.954, lt:[[4,1],[5,0],[3,1],[2,0],[0,0]], denda:225000 },
+    { wil:'JAWA TENGAH', clu:'JATENG SELATAN', kd:'203', cab:'SOLO', npk:'20180929', nama:'EKO PRASETYO', bebanT:0, bebanNT:0, bahan:158, ar:1.148, lt:[[9,1],[8,2],[6,2],[3,1],[2,1]], denda:500000 },
+    { wil:'JAWA TENGAH', clu:'JATENG SELATAN', kd:'204', cab:'YOGYAKARTA', npk:'20210511', nama:'DIAN KUSUMAWARDANI', bebanT:1, bebanNT:1, bahan:136, ar:1.015, lt:[[5,1],[6,1],[4,0],[2,1],[1,0]], denda:300000 },
+    { wil:'JAWA TENGAH', clu:'JATENG SELATAN', kd:'205', cab:'PURWOKERTO', npk:'20220408', nama:'FAJAR NUGROHO', bebanT:5, bebanNT:2, bahan:108, ar:0.812, lt:[[2,0],[3,1],[1,0],[1,0],[0,0]], denda:75000 },
+
+    // JAWA TIMUR
+    { wil:'JAWA TIMUR', clu:'JATIM METROPOLITAN', kd:'301', cab:'SURABAYA UTARA', npk:'20180514', nama:'WAHYU HIDAYAT', bebanT:0, bebanNT:1, bahan:166, ar:1.155, lt:[[9,2],[8,3],[7,1],[4,1],[2,1]], denda:500000 },
+    { wil:'JAWA TIMUR', clu:'JATIM METROPOLITAN', kd:'302', cab:'SIDOARJO', npk:'20191021', nama:'MEGA PUSPITASARI', bebanT:1, bebanNT:0, bahan:140, ar:1.045, lt:[[6,1],[6,1],[5,1],[2,0],[1,0]], denda:325000 },
+    { wil:'JAWA TIMUR', clu:'JATIM TENGAH', kd:'303', cab:'MALANG', npk:'20201106', nama:'ARIF RAHMAN HAKIM', bebanT:2, bebanNT:1, bahan:130, ar:0.985, lt:[[5,0],[5,2],[4,1],[2,0],[1,0]], denda:250000 },
+    { wil:'JAWA TIMUR', clu:'JATIM TENGAH', kd:'304', cab:'KEDIRI', npk:'20210817', nama:'NINA MARLINA', bebanT:3, bebanNT:1, bahan:115, ar:0.918, lt:[[3,1],[4,1],[3,0],[1,1],[0,0]], denda:175000 },
+    { wil:'JAWA TIMUR', clu:'JATIM TIMUR', kd:'305', cab:'JEMBER', npk:'20220225', nama:'BAYU ADITYA', bebanT:4, bebanNT:1, bahan:120, ar:0.865, lt:[[3,0],[3,1],[2,0],[1,0],[0,0]], denda:125000 },
+
+    // SUMATERA
+    { wil:'SUMATERA', clu:'SUMBAGUT', kd:'401', cab:'MEDAN', npk:'20190119', nama:'PARLINDUNGAN SIREGAR', bebanT:1, bebanNT:0, bahan:148, ar:1.088, lt:[[7,1],[7,1],[5,1],[3,0],[2,0]], denda:400000 },
+    { wil:'SUMATERA', clu:'SUMBAGUT', kd:'402', cab:'PEKANBARU', npk:'20200612', nama:'RAHMAWATI NASUTION', bebanT:2, bebanNT:1, bahan:134, ar:1.022, lt:[[5,1],[6,1],[4,1],[2,0],[1,0]], denda:275000 },
+    { wil:'SUMATERA', clu:'SUMBAGSEL', kd:'403', cab:'PALEMBANG', npk:'20181203', nama:'DENI SAPUTRA', bebanT:1, bebanNT:0, bahan:154, ar:1.112, lt:[[8,1],[7,2],[5,2],[3,1],[1,0]], denda:425000 },
+    { wil:'SUMATERA', clu:'SUMBAGSEL', kd:'404', cab:'LAMPUNG', npk:'20210930', nama:'YULIANTI PRATIWI', bebanT:3, bebanNT:2, bahan:122, ar:0.935, lt:[[4,0],[4,1],[3,1],[1,0],[0,0]], denda:175000 },
+    { wil:'SUMATERA', clu:'SUMBAGSEL', kd:'405', cab:'JAMBI', npk:'20220514', nama:'IKHSAN RAMADHAN', bebanT:4, bebanNT:1, bahan:106, ar:0.838, lt:[[2,1],[3,0],[2,0],[1,0],[0,0]], denda:100000 },
+    { wil:'SUMATERA', clu:'SUMBAGUT', kd:'406', cab:'PADANG', npk:'20200908', nama:'FITRI HANDAYANI', bebanT:2, bebanNT:0, bahan:129, ar:0.992, lt:[[5,1],[5,1],[4,0],[2,0],[1,0]], denda:250000 }
+  ];
+
+  // Realistic LT indices (Reguler, Musiman) matching HK 2 structure
+  const ltIndeks = [
+    [125000, 140000], // LT 1
+    [165000, 185000], // LT 2
+    [210000, 235000], // LT 3
+    [260000, 290000], // LT 4
+    [320000, 350000]  // LT 5
+  ];
+
+  return specs.map((s, idx) => {
+    const target = 0.98;
+    // ar is capped realistically <= 1.0 for Selesai/Bahan, while we allow ACH to range 82%-118% by varying target slightly or using realistic ar/target
+    const targetEff = s.ar > 1.0 ? 0.86 : target;
+    const arReal = s.ar > 1.0 ? Math.min(0.995, s.ar * targetEff) : Math.min(0.99, s.ar * target);
+    const selesai = Math.round(s.bahan * arReal);
+    const ar = selesai / s.bahan;
+    const ach = ar / targetEff;
+
+    const row = [
+      2026, '11_NOV', s.wil, s.clu, s.kd, s.cab,
+      'CMO' + String(1001 + idx), s.npk, s.nama, 'CREDIT MARKETING OFFICER', 'CF',
+      s.bebanT, s.bebanNT, s.bahan, selesai, ar, targetEff, ach
+    ];
+
+    let totLT = 0;
+    for (let l = 0; l < 5; l++) {
+      const uReg = s.lt[l][0], ixReg = ltIndeks[l][0];
+      const uMus = s.lt[l][1], ixMus = ltIndeks[l][1];
+      row.push(uReg, ixReg, uReg * ixReg);
+      row.push(uMus, ixMus, uMus * ixMus);
+      totLT += (uReg * ixReg) + (uMus * ixMus);
+    }
+
+    const pengali = ach >= 1.10 ? 1.25 : ach >= 1.00 ? 1.10 : ach >= 0.90 ? 0.95 : 0.75;
+    const totalInsentifLT = ach * totLT * pengali;
+    const minVal = ach >= 1.0 ? 1500000 : 0;
+    const insentifAll = (totalInsentifLT < minVal ? minVal : totalInsentifLT) + s.denda;
+
+    row.push(totLT, pengali, totalInsentifLT, s.denda, insentifAll);
+    return row;
+  });
+}
+
+/* ---- Theme Management (Light / Dark) ---- */
+const SUN_SVG = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>';
+const MOON_SVG = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>';
+
+function applyTheme(dark) {
+  document.documentElement.classList.toggle('dark', dark);
+  document.querySelectorAll('.theme-toggle').forEach(btn => {
+    btn.innerHTML = dark ? SUN_SVG : MOON_SVG;
+    btn.title = dark ? 'Beralih ke Mode Terang' : 'Beralih ke Mode Gelap';
+  });
+  try { localStorage.setItem('cmo_theme', dark ? 'dark' : 'light'); } catch (_) {}
+  if (CHARTS_OPEN && VIEW === 'Lampiran') renderCharts(CURRENT_FILTERED);
+}
+function initTheme() {
+  let pref = null;
+  try { pref = localStorage.getItem('cmo_theme'); } catch (_) {}
+  const dark = pref ? pref === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(dark);
+}
+document.querySelectorAll('.theme-toggle').forEach(btn => {
+  btn.onclick = () => applyTheme(!document.documentElement.classList.contains('dark'));
+});
+
+/* ---- Visible Columns Computation ---- */
+function getVisibleCols() {
+  if (PRESET === 'exec') return [...EXEC_COLS].sort((a, b) => a - b);
+  if (PRESET === 'full') return HEAD.map((_, i) => i);
+  const cols = [];
+  COL_GROUPS.forEach(g => {
+    if (ACTIVE_GROUPS.has(g.id)) g.cols.forEach(c => cols.push(c));
+  });
+  return cols.length ? cols : [...EXEC_COLS];
+}
+
+function renderColumnControls() {
+  const execBtn = $('preExec'), fullBtn = $('preFull');
+  const activeCls = 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs';
+  const idleCls = 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white';
+  execBtn.className = 'px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ' + (PRESET === 'exec' ? activeCls : idleCls);
+  fullBtn.className = 'px-2.5 py-1 rounded-md text-[11px] font-semibold transition cursor-pointer ' + (PRESET === 'full' ? activeCls : idleCls);
+
+  $('groupChips').innerHTML = COL_GROUPS.map(g => {
+    const isOn = PRESET === 'full' || (PRESET === 'custom' && ACTIVE_GROUPS.has(g.id)) || (PRESET === 'exec' && ['id','perf','sum'].includes(g.id));
+    return `<button data-grp="${g.id}" class="px-2 py-1 rounded-lg text-[11px] font-medium border transition cursor-pointer flex items-center gap-1.5 ${
+      isOn
+        ? 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-800 dark:text-slate-100 shadow-2xs'
+        : 'bg-transparent border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500 hover:border-slate-300'
+    }"><span class="w-2 h-2 rounded-full shrink-0" style="background:${g.color};opacity:${isOn ? 1 : 0.35}"></span>${g.label}</button>`;
+  }).join('');
+}
+
+/* ---- Dropdown Filter Population (Cascading) ---- */
+function populateFilters() {
+  const wils = [...new Set(OUT.map(r => String(r[2] || '')).filter(Boolean))].sort();
+  const curWil = FILTER.wil;
+  $('fWil').innerHTML = '<option value="">Semua Wilayah</option>' + wils.map(w => `<option value="${esc(w)}" ${w === curWil ? 'selected' : ''}>${esc(w)}</option>`).join('');
+
+  const rowsForClu = curWil ? OUT.filter(r => String(r[2] || '') === curWil) : OUT;
+  const clus = [...new Set(rowsForClu.map(r => String(r[3] || '')).filter(Boolean))].sort();
+  if (FILTER.clu && !clus.includes(FILTER.clu)) FILTER.clu = '';
+  $('fClu').innerHTML = '<option value="">Semua Cluster</option>' + clus.map(c => `<option value="${esc(c)}" ${c === FILTER.clu ? 'selected' : ''}>${esc(c)}</option>`).join('');
+
+  const rowsForCab = FILTER.clu ? rowsForClu.filter(r => String(r[3] || '') === FILTER.clu) : rowsForClu;
+  const cabs = [...new Set(rowsForCab.map(r => String(r[5] || '')).filter(Boolean))].sort();
+  if (FILTER.cab && !cabs.includes(FILTER.cab)) FILTER.cab = '';
+  $('fCab').innerHTML = '<option value="">Semua Cabang</option>' + cabs.map(c => `<option value="${esc(c)}" ${c === FILTER.cab ? 'selected' : ''}>${esc(c)}</option>`).join('');
+}
+
+function getFilteredItems() {
+  let items = OUT.map((r, i) => ({ r, n: i + 5, idx: i }));
+  const q = FILTER.q.trim().toUpperCase();
+  if (q) {
+    items = items.filter(o => [2, 3, 4, 5, 6, 7, 8].some(ci => String(o.r[ci] || '').toUpperCase().includes(q)));
+  }
+  if (FILTER.wil) items = items.filter(o => String(o.r[2] || '') === FILTER.wil);
+  if (FILTER.clu) items = items.filter(o => String(o.r[3] || '') === FILTER.clu);
+  if (FILTER.cab) items = items.filter(o => String(o.r[5] || '') === FILTER.cab);
+  if (FILTER.ach) {
+    items = items.filter(o => {
+      const a = Number(o.r[17]) || 0;
+      if (FILTER.ach === 'gte110') return a >= 1.10;
+      if (FILTER.ach === '100_110') return a >= 1.00 && a < 1.10;
+      if (FILTER.ach === 'gte100') return a >= 1.00;
+      if (FILTER.ach === '90_100') return a >= 0.90 && a < 1.00;
+      if (FILTER.ach === 'lt90') return a < 0.90;
+      return true;
+    });
+  }
+  if (sc >= 0) {
+    items.sort((a, b) => {
+      const x = a.r[sc], y = b.r[sc];
+      return ((typeof x === 'number' && typeof y === 'number')
+        ? x - y
+        : String(x ?? '').localeCompare(String(y ?? ''), undefined, { numeric: true })) * sd;
+    });
+  }
+  return items;
+}
+
+function updateFilterBadge() {
+  let count = 0;
+  if (FILTER.q.trim()) count++;
+  if (FILTER.wil) count++;
+  if (FILTER.clu) count++;
+  if (FILTER.cab) count++;
+  if (FILTER.ach) count++;
+  $('fBadge').textContent = count;
+  $('bReset').classList.toggle('hidden', count === 0);
+}
+
+/* ---- Dynamic KPI Strip ---- */
+function updateKPIs(items) {
+  const n = items.length;
+  $('kpiCmo').textContent = n.toLocaleString('id-ID');
+  $('kpiCmoSub').textContent = `dari ${OUT.length.toLocaleString('id-ID')} total CMO`;
+
+  let sumTot = 0, sumAch = 0, sumBahan = 0, sumSelesai = 0, ach100 = 0;
+  let topRow = null;
+  for (const { r } of items) {
+    const ins = Number(r[52]) || 0;
+    const ach = Number(r[17]) || 0;
+    sumTot += ins;
+    sumAch += ach;
+    sumBahan += Number(r[13]) || 0;
+    sumSelesai += Number(r[14]) || 0;
+    if (ach >= 1.0) ach100++;
+    if (!topRow || ins > (Number(topRow[52]) || 0)) topRow = r;
+  }
+
+  $('kpiTot').textContent = fmtRp(sumTot);
+  $('kpiTotSub').textContent = n ? `Rata-rata: ${fmtRp(sumTot / n)} / CMO` : 'Tidak ada data';
+
+  const avgAch = n ? sumAch / n : 0;
+  const achEl = $('kpiAch'), badgeEl = $('kpiAchBadge');
+  achEl.textContent = (avgAch * 100).toFixed(1) + '%';
+  if (avgAch >= 1.0) {
+    achEl.className = 'text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-400';
+    badgeEl.className = 'text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300';
+    badgeEl.textContent = 'On Target';
+  } else if (avgAch >= 0.9) {
+    achEl.className = 'text-lg sm:text-xl font-bold text-amber-600 dark:text-amber-400';
+    badgeEl.className = 'text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300';
+    badgeEl.textContent = 'Mendekati';
+  } else {
+    achEl.className = 'text-lg sm:text-xl font-bold text-rose-600 dark:text-rose-400';
+    badgeEl.className = 'text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/50 text-rose-700 dark:text-rose-300';
+    badgeEl.textContent = 'Perlu Dorongan';
+  }
+  $('kpiAchSub').textContent = `${ach100} dari ${n} CMO capai ≥ 100%`;
+
+  $('kpiAssign').textContent = `${sumSelesai.toLocaleString('id-ID')} / ${sumBahan.toLocaleString('id-ID')}`;
+  const overallAR = sumBahan ? (sumSelesai / sumBahan) * 100 : 0;
+  $('kpiAssignSub').textContent = `Overall AR CO: ${overallAR.toFixed(2)}%`;
+
+  if (topRow) {
+    $('kpiTopVal').textContent = fmtRp(topRow[52]);
+    $('kpiTopName').textContent = `${topRow[8]} (${topRow[5] || topRow[2]})`;
+  } else {
+    $('kpiTopVal').textContent = 'Rp 0';
+    $('kpiTopName').textContent = '-';
+  }
+}
+
+/* ---- Interactive Chart.js Analytics ---- */
+function renderCharts(items) {
+  if (typeof Chart === 'undefined') return;
+  const isDark = document.documentElement.classList.contains('dark');
+  const txtColor = isDark ? '#cbd5e1' : '#475569';
+  const gridColor = isDark ? 'rgba(148,163,184,0.12)' : 'rgba(15,23,42,0.06)';
+
+  // 1) Bar chart: by Wilayah (or drill down to Cluster when a Wilayah is selected)
+  const byCluster = !!FILTER.wil;
+  const grpCol = byCluster ? 3 : 2;
+  $('barChartTitle').textContent = byCluster
+    ? `Total Insentif per Cluster (${FILTER.wil})`
+    : 'Total Insentif per Wilayah';
+
+  const map = new Map();
+  for (const { r } of items) {
+    const key = String(r[grpCol] || 'LAINNYA');
+    map.set(key, (map.get(key) || 0) + (Number(r[52]) || 0));
+  }
+  const sorted = [...map.entries()].sort((a, b) => b[1] - a[1]);
+  const labels = sorted.map(e => e[0]);
+  const values = sorted.map(e => Math.round(e[1]));
+
+  if (chartWilInst) chartWilInst.destroy();
+  chartWilInst = new Chart($('chartWilayah'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Total Insentif All (Rp)',
+        data: values,
+        backgroundColor: labels.map(l => {
+          const active = byCluster ? FILTER.clu === l : FILTER.wil === l;
+          return active ? '#2563eb' : (isDark ? 'rgba(59,130,246,0.75)' : 'rgba(37,99,235,0.82)');
+        }),
+        borderRadius: 6,
+        maxBarThickness: 44
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      onClick: (_, els) => {
+        if (!els.length) return;
+        const clicked = labels[els[0].index];
+        if (byCluster) {
+          FILTER.clu = FILTER.clu === clicked ? '' : clicked;
+        } else {
+          FILTER.wil = FILTER.wil === clicked ? '' : clicked;
+          FILTER.clu = '';
+          FILTER.cab = '';
+        }
+        populateFilters();
+        render();
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: ctx => ' ' + fmtRp(ctx.raw) }
+        }
+      },
+      scales: {
+        x: { ticks: { color: txtColor, font: { size: 10 } }, grid: { display: false } },
+        y: {
+          ticks: {
+            color: txtColor,
+            font: { size: 10 },
+            callback: v => v >= 1e6 ? (v / 1e6).toFixed(1) + ' Jt' : v.toLocaleString('id-ID')
+          },
+          grid: { color: gridColor }
+        }
+      }
+    }
+  });
+
+  // 2) Doughnut chart: Achievement Distribution
+  const buckets = [
+    { key: 'lt90',    label: '< 90%',        color: '#f43f5e', count: 0 },
+    { key: '90_100',  label: '90% – 99.9%',  color: '#f59e0b', count: 0 },
+    { key: '100_110', label: '100% – 109.9%',color: '#10b981', count: 0 },
+    { key: 'gte110',  label: '≥ 110%',       color: '#3b82f6', count: 0 }
+  ];
+  for (const { r } of items) {
+    const a = Number(r[17]) || 0;
+    if (a < 0.90) buckets[0].count++;
+    else if (a < 1.00) buckets[1].count++;
+    else if (a < 1.10) buckets[2].count++;
+    else buckets[3].count++;
+  }
+
+  if (chartAchInst) chartAchInst.destroy();
+  chartAchInst = new Chart($('chartAch'), {
+    type: 'doughnut',
+    data: {
+      labels: buckets.map(b => `${b.label} (${b.count})`),
+      datasets: [{
+        data: buckets.map(b => b.count),
+        backgroundColor: buckets.map(b => b.color),
+        borderWidth: isDark ? 2 : 2,
+        borderColor: isDark ? '#0f172a' : '#ffffff',
+        hoverOffset: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '62%',
+      onClick: (_, els) => {
+        if (!els.length) return;
+        const k = buckets[els[0].index].key;
+        FILTER.ach = FILTER.ach === k ? '' : k;
+        $('fAch').value = FILTER.ach;
+        render();
+      },
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { color: txtColor, boxWidth: 10, padding: 10, font: { size: 11 } }
+        }
+      }
+    }
+  });
+}
+
+/* ---- Main Table Renderer ---- */
+function render() {
+  const g = $('tbl');
+  const isLampiran = VIEW === 'Lampiran';
+  $('execHeader').classList.toggle('hidden', !isLampiran);
+  if (!isLampiran) {
+    $('empty').classList.add('hidden');
+    return preview(g);
+  }
+
+  renderColumnControls();
+  updateFilterBadge();
+  const items = getFilteredItems();
+  CURRENT_FILTERED = items;
+  updateKPIs(items);
+  if (CHARTS_OPEN) renderCharts(items);
+
+  const cols = getVisibleCols();
+  const showLetters = PRESET === 'full';
+  g.classList.toggle('no-letters', !showLetters);
+
+  let h = '<thead>';
+  if (showLetters) {
+    h += '<tr class="col-letters bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-500 dark:text-slate-400">';
+    h += '<th class="sticky-rn bg-slate-100 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700"></th>';
+    h += '<th class="sticky-act bg-slate-100 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700"></th>';
+    cols.forEach(i => {
+      const stickyCls = i === 8 ? 'sticky-name bg-slate-100 dark:bg-slate-800' : '';
+      h += `<th class="${stickyCls} font-normal border-b border-r border-slate-200 dark:border-slate-700 text-center">${colL(i + 2)}</th>`;
+    });
+    h += '</tr>';
+  }
+
+  // Column Headers Row
+  h += '<tr class="col-headers">';
+  h += '<th class="sticky-rn bg-slate-800 dark:bg-slate-800 text-slate-200 text-[10px] font-semibold border-b border-r border-slate-700 text-center py-2.5">#</th>';
+  h += '<th class="sticky-act bg-slate-800 dark:bg-slate-800 text-slate-200 text-[10px] font-semibold border-b border-r border-slate-700 text-center py-2.5" title="Rincian">Info</th>';
+
+  cols.forEach(i => {
+    const [hc] = colorOf(i);
+    const stickyCls = i === 8 ? 'sticky-name' : '';
+    const isSorted = sc === i;
+    const arrow = isSorted ? (sd > 0 ? '▲' : '▼') : '⇅';
+    const minW = i === 8 ? 'min-w-[190px]' : i === 5 ? 'min-w-[130px]' : i === 3 ? 'min-w-[135px]' : i === 2 ? 'min-w-[115px]' : i === 52 ? 'min-w-[130px]' : 'min-w-[96px]';
+    h += `<th data-s="${i}" data-a="${colL(i + 2)}4" data-v="${esc(HEAD[i])}" style="background:${hc};"
+      class="${stickyCls} ${minW} text-white text-[10.5px] font-semibold tracking-tight px-2.5 py-2.5 border-b border-r border-white/20 cursor-pointer select-none hover:brightness-110 transition text-left">
+      <div class="flex items-center justify-between gap-1.5">
+        <span class="leading-tight">${esc(HEAD[i])}</span>
+        <span class="text-[9px] ${isSorted ? 'opacity-100 text-amber-300' : 'opacity-45'} shrink-0">${arrow}</span>
+      </div>
+    </th>`;
+  });
+  h += '</tr></thead><tbody class="divide-y divide-slate-100 dark:divide-slate-800/80">';
+
+  const isDark = document.documentElement.classList.contains('dark');
+  for (let ri = 0; ri < items.length; ri++) {
+    const { r, n, idx } = items[ri];
+    const zebra = ri % 2 === 1 ? 'bg-slate-50/70 dark:bg-slate-800/35' : 'bg-white dark:bg-slate-900';
+    h += `<tr data-row="${idx}" class="${zebra} cursor-pointer transition-colors">`;
+    h += `<td class="sticky-rn ${zebra} text-center text-[11px] text-slate-400 font-mono border-r border-slate-200/70 dark:border-slate-800 py-2">${ri + 1}</td>`;
+    h += `<td class="sticky-act ${zebra} text-center border-r border-slate-200/70 dark:border-slate-800 py-2">
+      <button data-detail="${idx}" title="Lihat Rincian Insentif" class="p-1 rounded-lg text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/60 transition cursor-pointer">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+      </button>
+    </td>`;
+
+    cols.forEach(i => {
+      const v = r[i];
+      const [hc, bg] = colorOf(i);
+      const stickyCls = i === 8 ? `sticky-name ${zebra} font-semibold text-slate-900 dark:text-white` : '';
+      const align = (i <= 1 || PCT.has(i)) ? 'text-center' : (typeof v === 'number' ? 'text-right font-mono' : 'text-left');
+
+      // Subtle tint in Full 53-col mode to mirror original Excel sheet grouping
+      const cellBg = (PRESET === 'full' && !isDark && i !== 8) ? `background:${bg}55;` : '';
+      let content = '';
+
+      if (i === 17) {
+        // ACH PARAMETER visual badge
+        const a = Number(v) || 0;
+        const bCls = a >= 1.0
+          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300'
+          : a >= 0.9
+            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+            : 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300';
+        content = `<span class="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold font-mono ${bCls}">${esc(fmtP(v))}</span>`;
+      } else if (i === 52) {
+        // INSENTIF ALL highlighted
+        content = `<span class="font-bold text-emerald-700 dark:text-emerald-400">${esc(fmtRp(v))}</span>`;
+      } else if (i === 50 || i === 51 || i === 48) {
+        content = esc(fmtRp(v));
+      } else {
+        const t = PCT.has(i) ? fmtP(v) : NUM.has(i) ? fmtN(v) : v;
+        content = esc(t);
+      }
+
+      const hiCls = i === 52 ? 'bg-emerald-50/70 dark:bg-emerald-950/25' : '';
+      h += `<td data-a="${colL(i + 2)}${n}" data-v="${esc(v)}" style="${cellBg}"
+        class="${stickyCls} ${hiCls} ${align} px-2.5 py-2 whitespace-nowrap border-r border-slate-100 dark:border-slate-800/80 text-slate-700 dark:text-slate-200">${content}</td>`;
+    });
+    h += '</tr>';
+  }
+
+  g.innerHTML = h + '</tbody>';
+  $('empty').classList.toggle('hidden', items.length > 0);
+  const tot = items.reduce((a, o) => a + (+o.r[52] || 0), 0);
+  $('str').textContent = OUT.length
+    ? `Menampilkan ${items.length} dari ${OUT.length} CMO · Total Insentif All: ${fmtRp(tot)}`
+    : (FILE || '');
+}
+
+/* ---- Raw Excel Sheet Preview Renderer ---- */
+function preview(g) {
+  const a = PREV[VIEW] || [];
+  const nc = Math.min(60, Math.max(8, ...a.map(r => r.length)));
+  g.classList.remove('no-letters');
+  let h = '<thead><tr class="col-letters bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-500"><th class="sticky-rn bg-slate-100 dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700"></th>';
+  for (let c = 0; c < nc; c++) h += `<th class="font-normal border-b border-r border-slate-200 dark:border-slate-700 px-2">${colL(c)}</th>`;
+  h += '</tr></thead><tbody class="divide-y divide-slate-100 dark:divide-slate-800">';
+  a.forEach((r, i) => {
+    h += `<tr class="bg-white dark:bg-slate-900"><td class="sticky-rn bg-slate-50 dark:bg-slate-800/60 text-center text-[10px] text-slate-400 border-r border-slate-200 dark:border-slate-700 py-1">${i + 1}</td>`;
+    for (let c = 0; c < nc; c++) {
+      const v = r[c];
+      const val = v instanceof Date ? v.toISOString().slice(0, 10) : (v == null ? '' : v);
+      h += `<td class="px-2 py-1 border-r border-slate-100 dark:border-slate-800 whitespace-nowrap max-w-[200px] truncate" data-a="${colL(c)}${i + 1}" data-v="${esc(val)}">${esc(val)}</td>`;
+    }
+    h += '</tr>';
+  });
+  g.innerHTML = h + '</tbody>';
+  $('str').textContent = `${VIEW} · pratinjau ${a.length} baris pertama`;
+}
+
+function tabs() {
+  if (tabsList.length <= 1) {
+    $('tabs').innerHTML = `<span class="text-[11px] font-semibold text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/50">Sheet: Lampiran</span>`;
+    return;
+  }
+  $('tabs').innerHTML = tabsList.map(n => {
+    const on = n === VIEW;
+    return `<button data-t="${esc(n)}" class="px-3 py-1 rounded-lg text-[11px] font-semibold transition cursor-pointer whitespace-nowrap ${
+      on
+        ? 'bg-blue-600 text-white shadow-xs'
+        : isReq(n)
+          ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50'
+          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-800'
+    }">${esc(n)}</button>`;
+  }).join('');
+}
+
+/* ---- Slide-Over Detail Drawer ("Rincian Insentif CMO") ---- */
+function openDrawer(rowIdx) {
+  const r = OUT[rowIdx];
+  if (!r) return;
+  ACTIVE_DRAWER_ROW = r;
+
+  $('drPeriod').textContent = `${r[1] || '-'} ${r[0] || ''}`.trim();
+  $('drName').textContent = r[8] || '-';
+  $('drMeta').textContent = `NPK ${r[7] || '-'} · ID ${r[6] || '-'} · ${r[5] || '-'} (${r[3] || '-'} / ${r[2] || '-'})`;
+
+  const ach = Number(r[17]) || 0;
+  const achPct = (ach * 100).toFixed(2);
+  const barW = Math.min(100, Math.max(0, ach * 100 / 1.25));
+  const barColor = ach >= 1.0 ? 'bg-emerald-500' : ach >= 0.9 ? 'bg-amber-500' : 'bg-rose-500';
+  const badgeColor = ach >= 1.0
+    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300'
+    : ach >= 0.9
+      ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+      : 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300';
+
+  let ltRows = '';
+  for (let l = 1; l <= 5; l++) {
+    const b = 18 + (l - 1) * 6;
+    ltRows += `
+      <tr class="border-b border-slate-100 dark:border-slate-800 text-xs">
+        <td class="py-2 px-2.5 font-semibold text-slate-700 dark:text-slate-200">LT ${l}</td>
+        <td class="py-2 px-2 text-right font-mono">${fmtN(r[b])}</td>
+        <td class="py-2 px-2 text-right font-mono text-slate-500">${fmtN(r[b+1])}</td>
+        <td class="py-2 px-2 text-right font-mono font-medium">${fmtRp(r[b+2])}</td>
+        <td class="py-2 px-2 text-right font-mono border-l border-slate-100 dark:border-slate-800">${fmtN(r[b+3])}</td>
+        <td class="py-2 px-2 text-right font-mono text-slate-500">${fmtN(r[b+4])}</td>
+        <td class="py-2 px-2 text-right font-mono font-medium">${fmtRp(r[b+5])}</td>
+      </tr>`;
+  }
+
+  $('drBody').innerHTML = `
+    <!-- Identity Pills -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
+      <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800">
+        <div class="text-[10px] text-slate-400 uppercase font-semibold">Wilayah</div>
+        <div class="font-semibold text-slate-800 dark:text-slate-100 mt-0.5">${esc(r[2] || '-')}</div>
+      </div>
+      <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800">
+        <div class="text-[10px] text-slate-400 uppercase font-semibold">Cluster</div>
+        <div class="font-semibold text-slate-800 dark:text-slate-100 mt-0.5">${esc(r[3] || '-')}</div>
+      </div>
+      <div class="col-span-2 sm:col-span-1 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800">
+        <div class="text-[10px] text-slate-400 uppercase font-semibold">Cabang (${esc(r[4] || '-')})</div>
+        <div class="font-semibold text-slate-800 dark:text-slate-100 mt-0.5">${esc(r[5] || '-')}</div>
+      </div>
+    </div>
+
+    <!-- Performance & Achievement Progress -->
+    <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 space-y-3">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold text-slate-700 dark:text-slate-200">Performa Assign &amp; Achievement</span>
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold font-mono ${badgeColor}">${achPct}%</span>
+      </div>
+      <div class="w-full h-2.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+        <div class="h-full rounded-full ${barColor} transition-all duration-500" style="width:${barW}%"></div>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-xs">
+        <div>
+          <div class="text-[10px] text-slate-400">Bahan Assign</div>
+          <div class="font-bold font-mono text-slate-800 dark:text-slate-100">${fmtN(r[13])}</div>
+        </div>
+        <div>
+          <div class="text-[10px] text-slate-400">Selesai Assign</div>
+          <div class="font-bold font-mono text-slate-800 dark:text-slate-100">${fmtN(r[14])}</div>
+        </div>
+        <div>
+          <div class="text-[10px] text-slate-400">AR CO Assign</div>
+          <div class="font-bold font-mono text-blue-600 dark:text-blue-400">${fmtP(r[15])}</div>
+        </div>
+        <div>
+          <div class="text-[10px] text-slate-400">Target Param</div>
+          <div class="font-bold font-mono text-slate-600 dark:text-slate-300">${fmtP(r[16])}</div>
+        </div>
+      </div>
+      <div class="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-200/70 dark:border-slate-700">
+        <span>Beban Tagih Blm Penugasan: <b>${fmtN(r[11])}</b></span>
+        <span>Non Tagih: <b>${fmtN(r[12])}</b></span>
+      </div>
+    </div>
+
+    <!-- Compact LT 1-5 Breakdown Table -->
+    <div class="space-y-2">
+      <h3 class="text-xs font-bold text-slate-700 dark:text-slate-200">Rincian Kelompok LT 1 – LT 5</h3>
+      <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-100 dark:bg-slate-800 text-[10px] uppercase text-slate-500 dark:text-slate-400">
+              <th rowspan="2" class="py-2 px-2.5 border-b border-slate-200 dark:border-slate-700">LT</th>
+              <th colspan="3" class="py-1.5 px-2 text-center border-b border-slate-200 dark:border-slate-700 text-blue-700 dark:text-blue-400">Reguler</th>
+              <th colspan="3" class="py-1.5 px-2 text-center border-b border-l border-slate-200 dark:border-slate-700 text-indigo-700 dark:text-indigo-400">Musiman</th>
+            </tr>
+            <tr class="bg-slate-50 dark:bg-slate-800/70 text-[10px] text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700">
+              <th class="py-1 px-2 text-right">Unit</th>
+              <th class="py-1 px-2 text-right">Indeks</th>
+              <th class="py-1 px-2 text-right">Insentif</th>
+              <th class="py-1 px-2 text-right border-l border-slate-200 dark:border-slate-700">Unit</th>
+              <th class="py-1 px-2 text-right">Indeks</th>
+              <th class="py-1 px-2 text-right">Insentif</th>
+            </tr>
+          </thead>
+          <tbody>${ltRows}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Final Incentive Summary -->
+    <div class="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50/70 dark:from-emerald-950/40 dark:to-slate-900 border border-emerald-200 dark:border-emerald-900/70 space-y-2 text-xs">
+      <div class="flex justify-between text-slate-600 dark:text-slate-300">
+        <span>Total Insentif Kel. LT</span>
+        <span class="font-mono font-semibold">${fmtRp(r[48])}</span>
+      </div>
+      <div class="flex justify-between text-slate-600 dark:text-slate-300">
+        <span>Pengali</span>
+        <span class="font-mono font-semibold">${fmtP(r[49])}</span>
+      </div>
+      <div class="flex justify-between text-slate-600 dark:text-slate-300">
+        <span>Total Insentif LT</span>
+        <span class="font-mono font-semibold">${fmtRp(r[50])}</span>
+      </div>
+      <div class="flex justify-between text-slate-600 dark:text-slate-300">
+        <span>Insentif Denda</span>
+        <span class="font-mono font-semibold">${fmtRp(r[51])}</span>
+      </div>
+      <div class="pt-2.5 mt-1 border-t border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
+        <span class="text-sm font-bold text-emerald-900 dark:text-emerald-200">INSENTIF ALL</span>
+        <span class="text-lg font-extrabold font-mono text-emerald-700 dark:text-emerald-400">${fmtRp(r[52])}</span>
+      </div>
+    </div>
+  `;
+
+  $('drawer').classList.remove('hidden');
+  requestAnimationFrame(() => {
+    $('drawerBackdrop').classList.remove('opacity-0');
+    $('drawerPanel').classList.remove('translate-x-full');
+  });
+}
+
+function closeDrawer() {
+  $('drawerBackdrop').classList.add('opacity-0');
+  $('drawerPanel').classList.add('translate-x-full');
+  setTimeout(() => $('drawer').classList.add('hidden'), 240);
+}
+
+function copyDrawerSummary() {
+  const r = ACTIVE_DRAWER_ROW;
+  if (!r) return;
+  const txt = [
+    `RINGKASAN INSENTIF CMO (${r[1] || ''} ${r[0] || ''})`,
+    `Nama      : ${r[8]} (NPK: ${r[7]} / ID: ${r[6]})`,
+    `Cabang    : ${r[5]} | Cluster: ${r[3]} | Wilayah: ${r[2]}`,
+    `Assign    : ${r[14]} / ${r[13]} (AR CO: ${fmtP(r[15])} | Target: ${fmtP(r[16])})`,
+    `Achievement: ${fmtP(r[17])}`,
+    `Total Insentif Kel. LT : ${fmtRp(r[48])}`,
+    `Pengali                : ${fmtP(r[49])}`,
+    `Total Insentif LT      : ${fmtRp(r[50])}`,
+    `Insentif Denda         : ${fmtRp(r[51])}`,
+    `TOTAL INSENTIF ALL     : ${fmtRp(r[52])}`
+  ].join('\n');
+
+  const ta = document.createElement('textarea');
+  ta.value = txt;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    showToast('Ringkasan insentif disalin ke clipboard ✓');
+  } catch (_) {
+    showToast('Gagal menyalin teks');
+  }
+  document.body.removeChild(ta);
+}
+
+/* ---- Excel Web Worker Processing (Preserved 100%) ---- */
+let PICK = null;
+function setFile(f) {
+  if (!f) return;
+  if (!/\.(xlsx|xlsm|xls)$/i.test(f.name)) {
+    $('umsg').textContent = 'Mohon pilih file .xlsx, .xlsm, atau .xls.';
+    return;
+  }
+  PICK = f;
+  $('fn').textContent = `${f.name} (${(f.size / 1048576).toFixed(2)} MB)`;
+  $('umsg').textContent = '';
+  $('chips').innerHTML = '';
+  $('bgo').disabled = false;
+}
+
+const WORK = `
 function toAOA(ws){
   var a=[],mr=-1,k,c,p,row;
   for(k in ws){
@@ -308,184 +1409,471 @@ function toAOA(ws){
 onmessage=function(e){
   try{
     var u8=new Uint8Array(e.data);
-    postMessage({p:'Reading sheet list…'});
+    postMessage({p:'Membaca daftar sheet…'});
     var names=XLSX.read(u8,{type:'array',bookSheets:true}).SheetNames;
     var pick={};
     REQ.forEach(function(n){var r=names.find(function(x){return x.trim().toLowerCase()===n.toLowerCase()});if(r)pick[n]=r});
     var miss=REQ.filter(function(n){return !pick[n]});
-    if(miss.length){postMessage({err:'Sheet not found: '+miss.join(', ')+'. Check the sheet names.',found:Object.keys(pick)});return}
-    postMessage({p:'Reading 5 sheets… (large files take a while)'});
+    if(miss.length){postMessage({err:'Sheet tidak ditemukan: '+miss.join(', ')+'. Periksa nama sheet pada workbook Anda.',found:Object.keys(pick)});return}
+    postMessage({p:'Membaca 5 sheet wajib… (file besar memerlukan beberapa detik)'});
     var wb=XLSX.read(u8,{type:'array',cellDates:true,sheets:REQ.map(function(n){return pick[n]}),cellFormula:false,cellHTML:false,cellNF:false,cellText:false,cellStyles:false});
     var S={},prev={};
     REQ.forEach(function(n){var a=toAOA(wb.Sheets[pick[n]]);S[n]=a;prev[pick[n]]=a.slice(0,300).map(function(r){return r.slice(0,60)})});
-    postMessage({p:'Generating Lampiran…'});
+    postMessage({p:'Menghitung Lampiran Insentif…'});
     var rows=generate(S);
     var shown=names.filter(function(n){return REQ.some(function(r){return r.toLowerCase()===n.trim().toLowerCase()})});
     postMessage({done:true,rows:rows,prev:prev,tabs:shown});
   }catch(err){postMessage({err:(err&&err.message)||String(err)})}
 };`;
-function processFile(){
-  if(!PICK)return;
-  const b=$('bgo'),um=$('umsg');
-  b.disabled=true;b.textContent='Processing…';um.textContent='';$('chips').innerHTML='';
-  const done=()=>{b.disabled=false;b.textContent='Process'};
-  let w,url;
-  const stop=()=>{try{w&&w.terminate();url&&URL.revokeObjectURL(url)}catch(_){}};
-  PICK.arrayBuffer().then(buf=>{
-    const src='importScripts("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js");'+$('core').textContent+WORK;
-    url=URL.createObjectURL(new Blob([src],{type:'text/javascript'}));
-    w=new Worker(url);
-    w.onmessage=ev=>{
-      const d=ev.data;
-      if(d.p){b.textContent=d.p;return}
+
+function processFile() {
+  if (!PICK) return;
+  const b = $('bgo'), um = $('umsg'), pb = $('procBar'), pt = $('procText');
+  b.disabled = true;
+  pb.classList.remove('hidden');
+  pt.textContent = 'Menyiapkan Web Worker…';
+  um.textContent = '';
+  $('chips').innerHTML = '';
+
+  const done = () => {
+    b.disabled = false;
+    pb.classList.add('hidden');
+  };
+  let w, url;
+  const stop = () => { try { w && w.terminate(); url && URL.revokeObjectURL(url); } catch (_) {} };
+
+  PICK.arrayBuffer().then(buf => {
+    const src = 'importScripts("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js");' + $('core').textContent + WORK;
+    url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+    w = new Worker(url);
+    w.onmessage = ev => {
+      const d = ev.data;
+      if (d.p) { pt.textContent = d.p; return; }
       stop();
-      if(d.err){
-        if(d.found)$('chips').innerHTML=REQ.map(n=>`<span class="chip ${d.found.includes(n)?'ok':'no'}">${d.found.includes(n)?'✓':'✗'} ${n}</span>`).join('');
-        um.textContent=d.err;done();return}
-      if(!d.rows.length){um.textContent='No rows match the criteria (job title CREDIT MARKETING OFFICER with a filled TGL LKP).';done();return}
-      OUT=d.rows;PREV=d.prev;FILE=PICK.name;
-      tabsList=d.tabs.concat(['Lampiran']);
-      VIEW='Lampiran';sc=-1;FILTER='';$('q').value='';msg('');
-      $('up').classList.add('hidden');$('dash').classList.remove('hidden');
-      tabs();render();$('stl').textContent='Data Lampiran berhasil digenerate dari '+FILE;publishAuto();
+      if (d.err) {
+        if (d.found) {
+          $('chips').innerHTML = REQ.map(n => {
+            const ok = d.found.includes(n);
+            return `<span class="px-2.5 py-1 rounded-full text-xs font-semibold border ${ok ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800' : 'bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800'}">${ok ? '✓' : '✗'} ${n}</span>`;
+          }).join('');
+        }
+        um.textContent = d.err;
+        done();
+        return;
+      }
+      if (!d.rows.length) {
+        um.textContent = 'Tidak ada baris yang memenuhi kriteria (jabatan CREDIT MARKETING OFFICER dengan TGL LKP terisi).';
+        done();
+        return;
+      }
+      OUT = d.rows;
+      PREV = d.prev;
+      FILE = PICK.name;
+      IS_DEMO = false;
+      tabsList = d.tabs.concat(['Lampiran']);
+      VIEW = 'Lampiran';
+      FILTER = { q: '', wil: '', clu: '', cab: '', ach: '' };
+      $('q').value = ''; $('fAch').value = '';
+      msg('');
+      updateHeaderBadges();
+      showOnly('dash');
+      populateFilters();
+      tabs();
+      render();
+      $('stl').textContent = 'Data Lampiran berhasil diproses dari ' + FILE;
+      showToast(`Berhasil memproses ${OUT.length} baris CMO ✓`);
+      publishAuto();
       done();
     };
-    w.onerror=ev=>{stop();um.textContent='Processing failed: '+(ev.message||'the worker stopped (possibly out of memory or the XLSX library could not load).');done()};
-    w.postMessage(buf,[buf]);
-  }).catch(err=>{stop();um.textContent='Could not read the file: '+err.message;done()});
+    w.onerror = ev => {
+      stop();
+      um.textContent = 'Pemrosesan gagal: ' + (ev.message || 'Web Worker berhenti (kemungkinan memori penuh atau library XLSX gagal dimuat).');
+      done();
+    };
+    w.postMessage(buf, [buf]);
+  }).catch(err => {
+    stop();
+    um.textContent = 'Tidak dapat membaca file: ' + err.message;
+    done();
+  });
 }
-function exportFile(type){
-  if(!OUT.length)return msg('Belum ada data. Klik LAMPIRAN dulu.');
-  const ws=XLSX.utils.aoa_to_sheet([HEAD,...OUT]);
-  OUT.forEach((r,ri)=>r.forEach((v,ci)=>{const c=ws[XLSX.utils.encode_cell({r:ri+1,c:ci})];
-    if(c&&typeof v==='number')c.z=PCT.has(ci)?'0.00%':NUM.has(ci)?'#,##0':c.z}));
-  ws['!cols']=HEAD.map(()=>({wch:16}));
-  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Lampiran');
-  XLSX.writeFile(wb,type==='csv'?'Lampiran.csv':'Lampiran.xlsx',{bookType:type});
+
+/* ---- Excel & CSV Export ---- */
+function exportFile(type, onlyFiltered) {
+  const rows = onlyFiltered ? CURRENT_FILTERED.map(o => o.r) : OUT;
+  if (!rows.length) return showToast('Tidak ada data untuk diekspor.');
+  const ws = XLSX.utils.aoa_to_sheet([HEAD, ...rows]);
+  rows.forEach((r, ri) => r.forEach((v, ci) => {
+    const c = ws[XLSX.utils.encode_cell({ r: ri + 1, c: ci })];
+    if (c && typeof v === 'number') c.z = PCT.has(ci) ? '0.00%' : NUM.has(ci) ? '#,##0' : c.z;
+  }));
+  ws['!cols'] = HEAD.map(() => ({ wch: 16 }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Lampiran');
+  const suffix = onlyFiltered ? '_Filtered' : '';
+  XLSX.writeFile(wb, type === 'csv' ? `Lampiran${suffix}.csv` : `Lampiran${suffix}.xlsx`, { bookType: type });
+  showToast(`Mengunduh Lampiran${suffix}.${type} (${rows.length} baris)`);
 }
-$('drop').onclick=()=>$('file').click();
-$('drop').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('file').click()}};
-$('file').onchange=e=>{setFile(e.target.files[0]);e.target.value=''};
-$('bgo').onclick=processFile;
-$('bback').onclick=()=>{$('dash').classList.add('hidden');$('up').classList.remove('hidden')};
-$('dlx').onclick=()=>exportFile('xlsx');
-$('dlc').onclick=()=>exportFile('csv');
-$('q').oninput=e=>{FILTER=e.target.value;if(VIEW==='Lampiran')render()};
-$('tabs').onclick=e=>{const b=e.target.closest('[data-t]');if(!b)return;VIEW=b.dataset.t;tabs();
-  if(VIEW==='Lampiran')render();else if(PREV[VIEW])render()};
-$('tbl').onclick=e=>{
-  const s=e.target.closest('th[data-s]');
-  if(s){const i=+s.dataset.s;if(sc===i)sd=-sd;else{sc=i;sd=1}render()}
-  const c=e.target.closest('[data-a]');if(c){$('nb').textContent=c.dataset.a;$('fv').textContent=c.dataset.v}
+
+/* ---- Navigation, Auth & Boot Logic ---- */
+const sha = async t => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))].map(b => b.toString(16).padStart(2, '0')).join('');
+
+function showOnly(id) {
+  ['gate', 'up', 'dash', 'nodata'].forEach(x => $(x).classList.toggle('hidden', x !== id));
+  if (id === 'up') {
+    $('upToDash').classList.toggle('hidden', OUT.length === 0);
+  }
+}
+
+function updateHeaderBadges() {
+  $('demoBadge').classList.toggle('hidden', !IS_DEMO);
+  $('liveBadge').classList.toggle('hidden', IS_DEMO || !OUT.length);
+  // In Demo Mode show mode switcher; in real admin show admin buttons
+  $('modeSwitch').classList.toggle('hidden', !IS_DEMO);
+  $('modeSwitch').classList.toggle('flex', IS_DEMO);
+  document.querySelectorAll('.admin-only').forEach(el => el.classList.toggle('hidden', !IS_REAL_ADMIN && !(!IS_DEMO && FILE)));
+  document.querySelectorAll('.admin-real-only').forEach(el => el.classList.toggle('hidden', !IS_REAL_ADMIN));
+}
+
+function activateDemoMode() {
+  IS_DEMO = true;
+  OUT = buildDemoRows();
+  PREV = {};
+  tabsList = ['Lampiran'];
+  VIEW = 'Lampiran';
+  FILTER = { q: '', wil: '', clu: '', cab: '', ach: '' };
+  $('q').value = ''; $('fAch').value = '';
+  updateHeaderBadges();
+  showOnly('dash');
+  populateFilters();
+  tabs();
+  render();
+  $('stl').textContent = 'Sample dataset aktif · 22 CMO di 4 Wilayah (Nov 2026)';
+}
+
+async function pollViewer() {
+  if (IS_DEMO) return;
+  try {
+    const r = await fetch('data.json?' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d && d.rows && d.rows.length && d.generatedAt !== LAST) {
+      LAST = d.generatedAt;
+      OUT = d.rows;
+      populateFilters();
+      render();
+      $('stl').textContent = 'Data diperbarui: ' + new Date(d.generatedAt).toLocaleString('id-ID');
+    }
+  } catch (_) {}
+}
+
+async function boot() {
+  initTheme();
+  if (location.hash === '#admin') {
+    IS_REAL_ADMIN = true;
+    IS_DEMO = false;
+    updateHeaderBadges();
+    let ok = false;
+    try { ok = !!ADMIN_HASH && sessionStorage.getItem('adm') === ADMIN_HASH; } catch (_) {}
+    if (ok) return showOnly('up');
+    if (!ADMIN_HASH) {
+      $('gt').textContent = 'Buat Passcode Admin';
+      $('gp').textContent = 'Passcode belum diatur. Pilih passcode baru untuk mendapatkan kode SHA-256 yang ditempel ke index.html.';
+      $('bpw').textContent = 'Create Passcode';
+    }
+    showOnly('gate');
+    $('pw').focus();
+    return;
+  }
+
+  IS_REAL_ADMIN = false;
+  try {
+    const r = await fetch('data.json?' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    if (!d || !d.rows || !d.rows.length) throw new Error('Empty data.json');
+    IS_DEMO = false;
+    OUT = d.rows;
+    PREV = {};
+    LAST = d.generatedAt || '';
+    tabsList = ['Lampiran'];
+    VIEW = 'Lampiran';
+    updateHeaderBadges();
+    showOnly('dash');
+    populateFilters();
+    tabs();
+    render();
+    setInterval(pollViewer, 120000);
+    $('stl').textContent = 'Data diperbarui: ' + (d.generatedAt ? new Date(d.generatedAt).toLocaleString('id-ID') : 'Live');
+  } catch (_) {
+    // Preview / offline fallback: load rich interactive Demo Mode immediately
+    activateDemoMode();
+  }
+}
+
+/* ---- GitHub Auto-Publish (Preserved 100%) ---- */
+function ghGet(k) { try { return localStorage.getItem(k) || sessionStorage.getItem(k) || ''; } catch (_) { return ''; } }
+function ghSet(k, v, keep) { try { localStorage.removeItem(k); sessionStorage.removeItem(k); (keep ? localStorage : sessionStorage).setItem(k, v); } catch (_) {} }
+function ghDel(k) { try { localStorage.removeItem(k); sessionStorage.removeItem(k); } catch (_) {} }
+function guessRepo() {
+  const m = location.hostname.match(/^(.+)\.github\.io$/);
+  if (!m) return '';
+  const seg = location.pathname.split('/').filter(Boolean)[0];
+  return m[1] + '/' + (seg && !/\.html?$/i.test(seg) ? seg : m[1] + '.github.io');
+}
+const ghCfg = () => ({ repo: ghGet('gh_repo') || guessRepo(), tok: ghGet('gh_tok') });
+const ghHead = t => ({ Authorization: 'Bearer ' + t, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' });
+
+async function ghErr(r) {
+  let m = '';
+  try { m = (await r.json()).message || ''; } catch (_) {}
+  if (r.status === 401) return 'Token tidak valid atau sudah kedaluwarsa.';
+  if (r.status === 403 && /not accessible by personal access token/i.test(m)) {
+    return 'Token dapat melihat repositori tetapi tidak memiliki izin menulis. Edit token di GitHub: Repository access = Only select repositories > repo ini, dan Contents = Read and write.';
+  }
+  if (r.status === 403 || r.status === 404) return 'Tidak dapat mengakses repositori dengan token ini (periksa nama repo & izin Contents: Read and write). ' + m;
+  return 'GitHub ' + r.status + ' ' + m;
+}
+
+function refreshPubUI() {
+  const c = ghCfg();
+  $('repo').value = c.repo;
+  $('pubsum').innerHTML = `<span>Auto-publish to GitHub: <b class="${c.tok ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500'}">${c.tok ? 'ON (' + esc(c.repo) + ')' : 'OFF'}</b></span>`;
+}
+const b64 = str => {
+  const b = new TextEncoder().encode(str);
+  let t = '';
+  for (let i = 0; i < b.length; i += 32768) t += String.fromCharCode.apply(null, b.subarray(i, i + 32768));
+  return btoa(t);
 };
-document.addEventListener('dragover',e=>{e.preventDefault();if(!$('up').classList.contains('hidden'))$('drop').classList.add('over')});
-document.addEventListener('dragleave',e=>{if(!e.relatedTarget)$('drop').classList.remove('over')});
-document.addEventListener('drop',e=>{e.preventDefault();$('drop').classList.remove('over');
-  if(!$('up').classList.contains('hidden'))setFile(e.dataTransfer.files[0])});
-const sha=async t=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t)))].map(b=>b.toString(16).padStart(2,'0')).join('');
-function showOnly(id){['gate','up','dash','nodata'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
-let LAST='';
-async function pollViewer(){
-  try{const r=await fetch('data.json?'+Date.now(),{cache:'no-store'});if(!r.ok)return;
-    const d=await r.json();
-    if(d&&d.rows&&d.rows.length&&d.generatedAt!==LAST){LAST=d.generatedAt;OUT=d.rows;render();
-      $('stl').textContent='Data updated: '+new Date(d.generatedAt).toLocaleString()}}catch(_){}
+
+async function autoPublish() {
+  const { repo, tok } = ghCfg();
+  const api = 'https://api.github.com/repos/' + repo + '/contents/data.json';
+  const H = ghHead(tok);
+  $('pst').textContent = 'Mempublikasikan ke GitHub…';
+  msg('');
+  let shaVal;
+  const g = await fetch(api, { headers: H, cache: 'no-store' });
+  if (g.ok) shaVal = (await g.json()).sha;
+  else if (g.status !== 404) throw new Error(await ghErr(g));
+  const body = {
+    message: 'Update dashboard data ' + new Date().toISOString(),
+    content: b64(JSON.stringify({ generatedAt: new Date().toISOString(), rows: OUT }))
+  };
+  if (shaVal) body.sha = shaVal;
+  const r = await fetch(api, { method: 'PUT', headers: { ...H, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error(await ghErr(r));
+  $('pst').textContent = 'Published to GitHub ✓';
+  showToast('data.json berhasil dipublikasikan ke GitHub ✓');
 }
-async function boot(){
-  if(location.hash==='#admin'){
-    document.body.classList.remove('viewer');
-    let ok=false;try{ok=!!ADMIN_HASH&&sessionStorage.getItem('adm')===ADMIN_HASH}catch(_){}
-    if(ok)return showOnly('up');
-    if(!ADMIN_HASH){$('gt').textContent='Create admin passcode';$('gp').textContent='No passcode is set yet. Choose one and you will get a code to paste into index.html.';$('bpw').textContent='Create'}
-    showOnly('gate');$('pw').focus();return}
-  document.body.classList.add('viewer');
-  let d;
-  try{
-    const r=await fetch('data.json?'+Date.now(),{cache:'no-store'});
-    if(!r.ok){$('nd').textContent='data.json not found (HTTP '+r.status+').';return showOnly('nodata')}
-    d=await r.json();
-  }catch(_){$('nd').textContent='data.json could not be loaded or is not valid JSON.';return showOnly('nodata')}
-  if(!d||!d.rows||!d.rows.length){$('nd').textContent='data.json contains no rows.';return showOnly('nodata')}
-  try{
-    OUT=d.rows;PREV={};LAST=d.generatedAt||'';tabsList=['Lampiran'];VIEW='Lampiran';
-    showOnly('dash');tabs();render();setInterval(pollViewer,120000);
-    $('stl').textContent='Data updated: '+(d.generatedAt?new Date(d.generatedAt).toLocaleString():'');
-  }catch(e){$('nd').textContent='Display error: '+e.message;showOnly('nodata')}
+
+function publishAuto() {
+  if (!ghCfg().tok) {
+    $('pst').textContent = '';
+    return;
+  }
+  autoPublish().catch(e => {
+    $('pst').textContent = '';
+    msg('Publish gagal: ' + e.message);
+  });
 }
-$('bpw').onclick=async()=>{
-  const v=$('pw').value;if(!v)return;
-  const h=await sha(v);
-  if(!ADMIN_HASH){
-    $('gmsg').innerHTML='Your passcode code (SHA-256):<br><code style="word-break:break-all">'+h+'</code><br>Paste it between the quotes in <b>const ADMIN_HASH=\'\'</b> in index.html and commit. Until you do, #admin is open to anyone.';
-    $('bpw').textContent='Continue';$('bpw').onclick=()=>showOnly('up');return}
-  if(h===ADMIN_HASH){try{sessionStorage.setItem('adm',h)}catch(_){}showOnly('up')}
-  else $('gmsg').textContent='Wrong passcode.';
+
+/* ---- Event Listeners ---- */
+$('drop').onclick = () => $('file').click();
+$('drop').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('file').click(); } };
+$('file').onchange = e => { setFile(e.target.files[0]); e.target.value = ''; };
+$('bgo').onclick = processFile;
+$('bLoadDemo').onclick = () => { activateDemoMode(); showToast('Data Demo dimuat ✓'); };
+$('upToDash').onclick = () => showOnly('dash');
+$('bback').onclick = () => showOnly('up');
+$('swAdmin').onclick = () => showOnly('up');
+$('swViewer').onclick = () => showOnly('dash');
+$('gateBack').onclick = e => { e.preventDefault(); location.hash = ''; };
+
+// Filters
+$('q').oninput = e => { FILTER.q = e.target.value; render(); };
+$('fWil').onchange = e => { FILTER.wil = e.target.value; FILTER.clu = ''; FILTER.cab = ''; populateFilters(); render(); };
+$('fClu').onchange = e => { FILTER.clu = e.target.value; FILTER.cab = ''; populateFilters(); render(); };
+$('fCab').onchange = e => { FILTER.cab = e.target.value; render(); };
+$('fAch').onchange = e => { FILTER.ach = e.target.value; render(); };
+$('bReset').onclick = () => {
+  FILTER = { q: '', wil: '', clu: '', cab: '', ach: '' };
+  $('q').value = ''; $('fAch').value = '';
+  populateFilters();
+  render();
+  showToast('Semua filter direset');
 };
-$('pw').onkeydown=e=>{if(e.key==='Enter')$('bpw').click()};
-$('bpub').onclick=()=>{
-  if(!OUT.length)return msg('No data to publish.');
-  if(ghCfg().tok)return publishAuto();
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([JSON.stringify({generatedAt:new Date().toISOString(),rows:OUT})],{type:'application/json'}));
-  a.download='data.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000);
-  msg('data.json downloaded. Add it to your repo next to index.html and commit.');
+
+// Analytics panel toggle
+$('bCharts').onclick = () => {
+  CHARTS_OPEN = !CHARTS_OPEN;
+  const wrap = $('analyticsWrap');
+  if (CHARTS_OPEN) {
+    wrap.classList.remove('max-h-0', 'opacity-0');
+    wrap.classList.add('max-h-[520px]', 'opacity-100');
+    $('bChartsChev').classList.add('rotate-180');
+    renderCharts(CURRENT_FILTERED);
+  } else {
+    wrap.classList.add('max-h-0', 'opacity-0');
+    wrap.classList.remove('max-h-[520px]', 'opacity-100');
+    $('bChartsChev').classList.remove('rotate-180');
+  }
 };
-$('bexit').onclick=()=>{try{sessionStorage.removeItem('adm')}catch(_){}location.href=location.pathname};
-window.addEventListener('hashchange',()=>location.reload());
-/* ---- auto-publish ke GitHub (hanya admin) ---- */
-function ghGet(k){try{return localStorage.getItem(k)||sessionStorage.getItem(k)||''}catch(_){return ''}}
-function ghSet(k,v,keep){try{localStorage.removeItem(k);sessionStorage.removeItem(k);(keep?localStorage:sessionStorage).setItem(k,v)}catch(_){}}
-function ghDel(k){try{localStorage.removeItem(k);sessionStorage.removeItem(k)}catch(_){}}
-function guessRepo(){
-  const m=location.hostname.match(/^(.+)\.github\.io$/);if(!m)return '';
-  const seg=location.pathname.split('/').filter(Boolean)[0];
-  return m[1]+'/'+(seg&&!/\.html?$/i.test(seg)?seg:m[1]+'.github.io');
-}
-const ghCfg=()=>({repo:ghGet('gh_repo')||guessRepo(),tok:ghGet('gh_tok')});
-const ghHead=t=>({Authorization:'Bearer '+t,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'});
-async function ghErr(r){
-  let m='';try{m=(await r.json()).message||''}catch(_){}
-  if(r.status===401)return 'Token is invalid or expired.';
-  if(r.status===403||r.status===404)return 'Cannot access this repository with the token (check the repo name and that the token has Contents: Read and write). '+m;
-  return 'GitHub '+r.status+' '+m;
-}
-function refreshPubUI(){const c=ghCfg();$('repo').value=c.repo;$('pubsum').textContent='Auto-publish to GitHub: '+(c.tok?'on ('+c.repo+')':'off')}
-const b64=str=>{const b=new TextEncoder().encode(str);let t='';for(let i=0;i<b.length;i+=32768)t+=String.fromCharCode.apply(null,b.subarray(i,i+32768));return btoa(t)};
-async function autoPublish(){
-  const {repo,tok}=ghCfg(),api='https://api.github.com/repos/'+repo+'/contents/data.json',H=ghHead(tok);
-  $('pst').textContent='Publishing to GitHub…';msg('');
-  let sha;
-  const g=await fetch(api,{headers:H,cache:'no-store'});
-  if(g.ok)sha=(await g.json()).sha;else if(g.status!==404)throw new Error(await ghErr(g));
-  const body={message:'Update dashboard data '+new Date().toISOString(),content:b64(JSON.stringify({generatedAt:new Date().toISOString(),rows:OUT}))};
-  if(sha)body.sha=sha;
-  const r=await fetch(api,{method:'PUT',headers:{...H,'Content-Type':'application/json'},body:JSON.stringify(body)});
-  if(!r.ok)throw new Error(await ghErr(r));
-  $('pst').textContent='Published to GitHub ✓ Visitors will see the new data in about a minute.';
-}
-function publishAuto(){
-  if(!ghCfg().tok){$('pst').textContent='Auto-publish is off. Add a GitHub token on the upload screen, or use Publish data.json.';return}
-  autoPublish().catch(e=>{$('pst').textContent='';msg('Publish failed: '+e.message)});
-}
-$('tsave').onclick=async()=>{
-  const repo=$('repo').value.trim(),tok=$('tok').value.trim()||ghGet('gh_tok'),pm=$('pmsg');
-  pm.style.color='#b00020';
-  if(!/^[\w.-]+\/[\w.-]+$/.test(repo)){pm.textContent='Repository must look like owner/repo.';return}
-  if(!tok){pm.textContent='Paste a GitHub token first.';return}
-  pm.style.color='#555';pm.textContent='Testing…';
-  try{
-    const r=await fetch('https://api.github.com/repos/'+repo,{headers:ghHead(tok)});
-    if(!r.ok)throw new Error(await ghErr(r));
-    const j=await r.json();
-    if(j.permissions&&j.permissions.push===false)throw new Error('The token can read but not write to this repository.');
-    ghSet('gh_repo',repo,true);ghSet('gh_tok',tok,$('rem').checked);$('tok').value='';
-    pm.style.color='#0b6b2f';pm.textContent='Connected ✓ Data will be published automatically after each Process.';
+
+// Column Presets & Group Chips
+$('preExec').onclick = () => { PRESET = 'exec'; render(); };
+$('preFull').onclick = () => { PRESET = 'full'; render(); };
+$('groupChips').onclick = e => {
+  const b = e.target.closest('[data-grp]');
+  if (!b) return;
+  const id = b.dataset.grp;
+  if (PRESET === 'exec') ACTIVE_GROUPS = new Set(['id', 'perf', 'sum']);
+  else if (PRESET === 'full') ACTIVE_GROUPS = new Set(COL_GROUPS.map(g => g.id));
+  PRESET = 'custom';
+  if (ACTIVE_GROUPS.has(id)) {
+    if (ACTIVE_GROUPS.size > 1) ACTIVE_GROUPS.delete(id);
+  } else {
+    ACTIVE_GROUPS.add(id);
+  }
+  render();
+};
+
+// Export Dropdown
+$('expBtn').onclick = e => { e.stopPropagation(); $('expMenu').classList.toggle('hidden'); };
+document.addEventListener('click', () => $('expMenu').classList.add('hidden'));
+$('dlxFiltered').onclick = () => exportFile('xlsx', true);
+$('dlxAll').onclick = () => exportFile('xlsx', false);
+$('dlcFiltered').onclick = () => exportFile('csv', true);
+$('dlcAll').onclick = () => exportFile('csv', false);
+
+// Table Clicks: Sort, Cell Inspector, Detail Drawer
+$('tbl').onclick = e => {
+  const s = e.target.closest('th[data-s]');
+  if (s) {
+    const i = +s.dataset.s;
+    if (sc === i) sd = -sd; else { sc = i; sd = (typeof OUT[0]?.[i] === 'number' ? -1 : 1); }
+    render();
+    return;
+  }
+  const c = e.target.closest('[data-a]');
+  if (c) {
+    $('nb').textContent = c.dataset.a;
+    $('fv').textContent = c.dataset.v;
+  }
+  const det = e.target.closest('[data-detail]');
+  if (det) {
+    openDrawer(+det.dataset.detail);
+    return;
+  }
+  const tr = e.target.closest('tr[data-row]');
+  if (tr && VIEW === 'Lampiran') {
+    openDrawer(+tr.dataset.row);
+  }
+};
+
+// Drawer Events
+$('drClose').onclick = closeDrawer;
+$('drawerBackdrop').onclick = closeDrawer;
+$('drCopy').onclick = copyDrawerSummary;
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+// Sheet Tabs
+$('tabs').onclick = e => {
+  const b = e.target.closest('[data-t]');
+  if (!b) return;
+  VIEW = b.dataset.t;
+  tabs();
+  render();
+};
+
+// Drag & Drop Excel
+document.addEventListener('dragover', e => {
+  e.preventDefault();
+  if (!$('up').classList.contains('hidden')) $('drop').classList.add('border-blue-500', 'bg-blue-50/50', 'dark:bg-blue-950/30');
+});
+document.addEventListener('dragleave', e => {
+  if (!e.relatedTarget) $('drop').classList.remove('border-blue-500', 'bg-blue-50/50', 'dark:bg-blue-950/30');
+});
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  $('drop').classList.remove('border-blue-500', 'bg-blue-50/50', 'dark:bg-blue-950/30');
+  if (!$('up').classList.contains('hidden')) setFile(e.dataTransfer.files[0]);
+});
+
+// Admin Passcode Gate
+$('bpw').onclick = async () => {
+  const v = $('pw').value;
+  if (!v) return;
+  const h = await sha(v);
+  if (!ADMIN_HASH) {
+    $('gmsg').innerHTML = 'Kode SHA-256 passcode Anda:<br><code class="block mt-1 p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 break-all select-all">' + h + '</code><span class="block mt-1.5 text-slate-500">Tempel kode ini di antara tanda kutip pada <b>const ADMIN_HASH=\'\'</b> di index.html lalu commit.</span>';
+    $('bpw').textContent = 'Lanjutkan ke Upload';
+    $('bpw').onclick = () => showOnly('up');
+    return;
+  }
+  if (h === ADMIN_HASH) {
+    try { sessionStorage.setItem('adm', h); } catch (_) {}
+    showOnly('up');
+  } else {
+    $('gmsg').textContent = 'Passcode salah. Silakan coba lagi.';
+  }
+};
+$('pw').onkeydown = e => { if (e.key === 'Enter') $('bpw').click(); };
+
+// Manual Publish & Exit Admin
+$('bpub').onclick = () => {
+  if (!OUT.length) return msg('Tidak ada data untuk dipublikasikan.');
+  if (ghCfg().tok) return publishAuto();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({ generatedAt: new Date().toISOString(), rows: OUT })], { type: 'application/json' }));
+  a.download = 'data.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  showToast('data.json diunduh. Commit di sebelah index.html.');
+};
+$('bexit').onclick = () => {
+  try { sessionStorage.removeItem('adm'); } catch (_) {}
+  location.href = location.pathname;
+};
+window.addEventListener('hashchange', () => location.reload());
+
+// GitHub Token Save & Clear
+$('tsave').onclick = async () => {
+  const repo = $('repo').value.trim();
+  const tok = $('tok').value.trim() || ghGet('gh_tok');
+  const pm = $('pmsg');
+  pm.className = 'text-xs whitespace-pre-line text-rose-600 dark:text-rose-400';
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { pm.textContent = 'Format repositori harus owner/repo.'; return; }
+  if (!tok) { pm.textContent = 'Tempel GitHub token terlebih dahulu.'; return; }
+  pm.className = 'text-xs whitespace-pre-line text-slate-500';
+  pm.textContent = 'Menguji koneksi…';
+  try {
+    const r = await fetch('https://api.github.com/repos/' + repo, { headers: ghHead(tok) });
+    if (!r.ok) throw new Error(await ghErr(r));
+    const j = await r.json();
+    if (j.permissions && j.permissions.push === false) throw new Error('Token hanya dapat membaca, tidak dapat menulis ke repositori ini.');
+    ghSet('gh_repo', repo, true);
+    ghSet('gh_tok', tok, $('rem').checked);
+    $('tok').value = '';
+    pm.className = 'text-xs whitespace-pre-line text-emerald-600 dark:text-emerald-400 font-medium';
+    pm.textContent = 'Terhubung ✓ (akses baca terverifikasi). Izin tulis akan diuji saat publikasi pertama.';
     refreshPubUI();
-  }catch(e){pm.style.color='#b00020';pm.textContent=e.message}
+  } catch (e) {
+    pm.className = 'text-xs whitespace-pre-line text-rose-600 dark:text-rose-400';
+    pm.textContent = e.message;
+  }
 };
-$('tclear').onclick=()=>{ghDel('gh_tok');$('tok').value='';$('pmsg').style.color='#555';$('pmsg').textContent='Token removed from this browser.';refreshPubUI()};
+$('tclear').onclick = () => {
+  ghDel('gh_tok');
+  $('tok').value = '';
+  $('pmsg').className = 'text-xs text-slate-500';
+  $('pmsg').textContent = 'Token dihapus dari browser ini.';
+  refreshPubUI();
+};
+
 refreshPubUI();
-tabs();render();boot();
+boot();
 </script>
 </body>
 </html>
