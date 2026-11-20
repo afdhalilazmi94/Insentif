@@ -85,7 +85,7 @@ td.pv{background:#fff;border-right:1px solid #e1e1e1;border-bottom:1px solid #e1
   <div id="st"><span id="stl">Ready</span><span id="str"></span></div>
 </div>
 <input id="file" type="file" accept=".xlsx,.xlsm,.xls" class="hidden">
-<script>
+<script id="core">
 const REQ=['DP','Dakar','HK 2','Partial','Denda'];
 const MON=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 const HEAD=["THN","BLN","WILAYAH","CLUSTER","KD CAB","NM_CABANG","ID_PERSON","NPK","NAMA KARYAWAN","JABATAN","JOB","BEBAN TAGIH BLM PENUGASAN","BEBAN NON TAGIH BLM PENUGASAN","BAHAN ASSIGN","SELESAI ASSIGN","AR CO ASSIGN","TARGET PARAMETER","ACH PARAMETER"];
@@ -196,6 +196,8 @@ function generate(S){
 }
 
 
+</script>
+<script>
 /* ---- tampilan seperti Excel ---- */
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
@@ -205,7 +207,7 @@ const colL=n=>{let s='';n++;while(n>0){const m=(n-1)%26;s=String.fromCharCode(65
 const IDXW=new Set([...PCT].filter(i=>![15,16,17].includes(i)));
 const WID=i=>i<2?68:i===3?158:i===7?200:i===8?187:IDXW.has(i)?75:103;
 const ST=new Set([0,11,13,18,24,30,36,42,48,51,52]),EN=new Set([10,12,17,23,29,35,41,47,50,51,52]);
-let WB=null,S=null,VIEW='Lampiran',FILE='',FILTER='',sc=-1,sd=1,tabsList=['Lampiran'];
+let PREV={},VIEW='Lampiran',FILE='',FILTER='',sc=-1,sd=1,tabsList=['Lampiran'];
 const isReq=n=>REQ.some(r=>r.toLowerCase()===n.trim().toLowerCase());
 const msg=t=>{$('msg').textContent=t||''};
 const lettersRow=n=>'<tr class="L"><th class="rn"></th>'+Array.from({length:n},(_,i)=>`<th>${colL(i)}</th>`).join('')+'</tr>';
@@ -236,7 +238,7 @@ function render(){
   $('str').textContent=OUT.length?`${items.length} dari ${OUT.length} baris · Total insentif all: ${Math.round(tot).toLocaleString('en-US')}`:(FILE||'');
 }
 function preview(g){
-  const a=XLSX.utils.sheet_to_json(WB.Sheets[VIEW],{header:1,raw:true,defval:'',blankrows:true}).slice(0,300);
+  const a=PREV[VIEW]||[];
   const nc=Math.min(60,Math.max(8,...a.map(r=>r.length)));
   let h='<colgroup><col style="width:46px">'+'<col style="width:100px">'.repeat(nc)+'</colgroup><thead>'+lettersRow(nc)+'</thead><tbody>';
   a.forEach((r,i)=>{h+=`<tr><td class="rn">${i+1}</td>`;
@@ -254,30 +256,68 @@ function setFile(f){
   PICK=f;$('fn').textContent=f.name+' ('+(f.size/1048576).toFixed(1)+' MB)';
   $('umsg').textContent='';$('chips').innerHTML='';$('bgo').disabled=false;
 }
+const WORK=`
+function toAOA(ws){
+  var a=[],mr=-1,k,c,p,row;
+  for(k in ws){
+    if(k.charCodeAt(0)===33)continue;
+    c=ws[k];if(!c||c.v===undefined||c.t==='z')continue;
+    p=XLSX.utils.decode_cell(k);
+    row=a[p.r]||(a[p.r]=[]);
+    row[p.c]=c.t==='e'?null:c.v;
+    if(p.r>mr)mr=p.r;
+  }
+  for(var i=0;i<=mr;i++)if(!a[i])a[i]=[];
+  return a;
+}
+onmessage=function(e){
+  try{
+    var u8=new Uint8Array(e.data);
+    postMessage({p:'Reading sheet list…'});
+    var names=XLSX.read(u8,{type:'array',bookSheets:true}).SheetNames;
+    var pick={};
+    REQ.forEach(function(n){var r=names.find(function(x){return x.trim().toLowerCase()===n.toLowerCase()});if(r)pick[n]=r});
+    var miss=REQ.filter(function(n){return !pick[n]});
+    if(miss.length){postMessage({err:'Sheet not found: '+miss.join(', ')+'. Check the sheet names.',found:Object.keys(pick)});return}
+    postMessage({p:'Reading 5 sheets… (large files take a while)'});
+    var wb=XLSX.read(u8,{type:'array',cellDates:true,sheets:REQ.map(function(n){return pick[n]}),cellFormula:false,cellHTML:false,cellNF:false,cellText:false,cellStyles:false});
+    var S={},prev={};
+    REQ.forEach(function(n){var a=toAOA(wb.Sheets[pick[n]]);S[n]=a;prev[pick[n]]=a.slice(0,300).map(function(r){return r.slice(0,60)})});
+    postMessage({p:'Generating Lampiran…'});
+    var rows=generate(S);
+    var shown=names.filter(function(n){return REQ.some(function(r){return r.toLowerCase()===n.trim().toLowerCase()})});
+    postMessage({done:true,rows:rows,prev:prev,tabs:shown});
+  }catch(err){postMessage({err:(err&&err.message)||String(err)})}
+};`;
 function processFile(){
   if(!PICK)return;
-  const b=$('bgo');b.disabled=true;b.textContent='Processing…';$('umsg').textContent='';
+  const b=$('bgo'),um=$('umsg');
+  b.disabled=true;b.textContent='Processing…';um.textContent='';$('chips').innerHTML='';
   const done=()=>{b.disabled=false;b.textContent='Process'};
-  const fr=new FileReader();
-  fr.onerror=()=>{$('umsg').textContent='Could not read the file.';done()};
-  fr.onload=e=>setTimeout(()=>{try{
-    WB=XLSX.read(e.target.result,{type:'array',cellDates:true});S={};
-    for(const n of REQ){const real=WB.SheetNames.find(x=>x.trim().toLowerCase()===n.toLowerCase());
-      if(real)S[n]=XLSX.utils.sheet_to_json(WB.Sheets[real],{header:1,raw:true,defval:null,blankrows:true})}
-    $('chips').innerHTML=REQ.map(n=>`<span class="chip ${S[n]?'ok':'no'}">${S[n]?'✓':'✗'} ${n}</span>`).join('');
-    const miss=REQ.filter(n=>!S[n]);
-    if(miss.length)throw new Error('Sheet not found: '+miss.join(', ')+'. Check the sheet names.');
-    OUT=generate(S);
-    if(!OUT.length)throw new Error('No rows match the criteria (job title CREDIT MARKETING OFFICER with a filled TGL LKP).');
-    FILE=PICK.name;
-    tabsList=WB.SheetNames.map(n=>n.trim().toLowerCase()==='lampiran'?'Lampiran':n);
-    if(!tabsList.includes('Lampiran'))tabsList.push('Lampiran');
-    VIEW='Lampiran';sc=-1;FILTER='';$('q').value='';msg('');
-    $('up').classList.add('hidden');$('dash').classList.remove('hidden');
-    tabs();render();$('stl').textContent='Data Lampiran berhasil digenerate dari '+FILE;
-  }catch(err){$('umsg').textContent=err.message}
-  done()},30);
-  fr.readAsArrayBuffer(PICK);
+  let w,url;
+  const stop=()=>{try{w&&w.terminate();url&&URL.revokeObjectURL(url)}catch(_){}};
+  PICK.arrayBuffer().then(buf=>{
+    const src='importScripts("https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js");'+$('core').textContent+WORK;
+    url=URL.createObjectURL(new Blob([src],{type:'text/javascript'}));
+    w=new Worker(url);
+    w.onmessage=ev=>{
+      const d=ev.data;
+      if(d.p){b.textContent=d.p;return}
+      stop();
+      if(d.err){
+        if(d.found)$('chips').innerHTML=REQ.map(n=>`<span class="chip ${d.found.includes(n)?'ok':'no'}">${d.found.includes(n)?'✓':'✗'} ${n}</span>`).join('');
+        um.textContent=d.err;done();return}
+      if(!d.rows.length){um.textContent='No rows match the criteria (job title CREDIT MARKETING OFFICER with a filled TGL LKP).';done();return}
+      OUT=d.rows;PREV=d.prev;FILE=PICK.name;
+      tabsList=d.tabs.concat(['Lampiran']);
+      VIEW='Lampiran';sc=-1;FILTER='';$('q').value='';msg('');
+      $('up').classList.add('hidden');$('dash').classList.remove('hidden');
+      tabs();render();$('stl').textContent='Data Lampiran berhasil digenerate dari '+FILE;
+      done();
+    };
+    w.onerror=ev=>{stop();um.textContent='Processing failed: '+(ev.message||'the worker stopped (possibly out of memory or the XLSX library could not load).');done()};
+    w.postMessage(buf,[buf]);
+  }).catch(err=>{stop();um.textContent='Could not read the file: '+err.message;done()});
 }
 function exportFile(type){
   if(!OUT.length)return msg('Belum ada data. Klik LAMPIRAN dulu.');
@@ -297,7 +337,7 @@ $('dlx').onclick=()=>exportFile('xlsx');
 $('dlc').onclick=()=>exportFile('csv');
 $('q').oninput=e=>{FILTER=e.target.value;if(VIEW==='Lampiran')render()};
 $('tabs').onclick=e=>{const b=e.target.closest('[data-t]');if(!b)return;VIEW=b.dataset.t;tabs();
-  if(VIEW==='Lampiran')render();else if(WB&&WB.Sheets[VIEW])render()};
+  if(VIEW==='Lampiran')render();else if(PREV[VIEW])render()};
 $('tbl').onclick=e=>{
   const s=e.target.closest('th[data-s]');
   if(s){const i=+s.dataset.s;if(sc===i)sd=-sd;else{sc=i;sd=1}render()}
