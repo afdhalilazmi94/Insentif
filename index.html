@@ -9,7 +9,7 @@
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{display:flex;flex-direction:column;font:12px Calibri,"Segoe UI",system-ui,sans-serif;color:#1b1b1b;background:#fff;overflow:hidden}
-.hidden{display:none}
+.hidden{display:none!important}
 #fxbar{display:flex;align-items:center;height:30px;border-bottom:1px solid #d4d4d4;flex:none}
 #nb{width:110px;height:100%;display:flex;align-items:center;padding:0 10px;border-right:1px solid #d4d4d4;font-size:13px}
 .fx{padding:0 12px;font:italic 15px serif;color:#555}
@@ -39,22 +39,51 @@ td.pv{background:#fff;border-right:1px solid #e1e1e1;border-bottom:1px solid #e1
 .tab.g{background:#a9d86e}
 .tab.on{background:#fff;font-weight:700;color:#217346;box-shadow:inset 0 -2px 0 #217346}
 #st{flex:none;height:24px;display:flex;justify-content:space-between;align-items:center;padding:0 12px;background:#f3f3f3;border-top:1px solid #e0e0e0;color:#444}
+#dash{display:flex;flex-direction:column;height:100%}
+#up{height:100%;display:flex;align-items:center;justify-content:center;background:#eef2f7;overflow:auto;padding:20px}
+.upc{width:min(560px,100%);background:#fff;border:1px solid #cdd6e2;border-radius:10px;padding:28px;display:grid;gap:16px}
+.upc h1{margin:0;font-size:22px;color:#1f3864}
+.upc p{margin:0;color:#555;font-size:14px;line-height:1.5}
+#drop{border:2px dashed #9fb3cf;border-radius:8px;text-align:center;padding:34px 16px;cursor:pointer;display:grid;gap:6px;background:#f8fafd}
+#drop.over{border-color:#1f3864;background:#e8eef9}
+#drop b{font-size:16px;color:#1f3864}#drop span{color:#555;font-size:13px}
+#chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:2px 10px;border-radius:99px;border:1px solid #bbb;font-size:12px}
+.chip.ok{color:#0b6b2f;border-color:#0b6b2f}.chip.no{color:#a11b1b;border-color:#a11b1b}
+#bgo{height:40px;font-size:15px}
+#bgo:disabled{opacity:.45;cursor:not-allowed}
+#umsg{color:#b00020;font-size:13px;white-space:pre-line}
+.note{font-size:12px;color:#777}
 </style>
 </head>
 <body>
-<div id="fxbar"><div id="nb">A1</div><div class="fx">fx</div><div id="fv"></div></div>
-<div id="band">
-  <button class="xb" id="bup">UPDATE</button>
-  <button class="xb" id="bgen">LAMPIRAN</button>
-  <button class="xl" id="dlx">Unduh Excel</button>
-  <button class="xl" id="dlc">Unduh CSV</button>
-  <input id="q" type="search" placeholder="Cari ID, nama, cabang…" aria-label="Cari">
-  <span id="msg" role="alert"></span>
+<div id="up">
+  <div class="upc">
+    <h1>Generator Lampiran</h1>
+    <p>Upload your Excel workbook (.xlsx or .xlsm) containing the sheets DP, Dakar, HK 2, Partial and Denda, then click Process.</p>
+    <div id="drop" tabindex="0" role="button" aria-label="Choose Excel file">
+      <b>Drop your file here, or click to browse</b>
+      <span id="fn">No file selected</span>
+    </div>
+    <div id="chips"></div>
+    <button class="xb" id="bgo" disabled>Process</button>
+    <div id="umsg" role="alert"></div>
+    <div class="note">Everything runs in your browser. Your file is not uploaded to any server.</div>
+  </div>
 </div>
-<div id="grid"><table id="tbl"></table>
-  <div id="empty">Belum ada data. Klik UPDATE untuk memuat workbook (sheet DP, Dakar, HK 2, Partial, Denda), lalu klik LAMPIRAN.</div></div>
-<div id="tabs"></div>
-<div id="st"><span id="stl">Ready</span><span id="str"></span></div>
+<div id="dash" class="hidden">
+  <div id="fxbar"><div id="nb">A1</div><div class="fx">fx</div><div id="fv"></div></div>
+  <div id="band">
+    <button class="xl" id="bback">&larr; Upload another file</button>
+    <button class="xl" id="dlx">Unduh Excel</button>
+    <button class="xl" id="dlc">Unduh CSV</button>
+    <input id="q" type="search" placeholder="Cari ID, nama, cabang…" aria-label="Cari">
+    <span id="msg" role="alert"></span>
+  </div>
+  <div id="grid"><table id="tbl"></table><div id="empty" class="hidden"></div></div>
+  <div id="tabs"></div>
+  <div id="st"><span id="stl">Ready</span><span id="str"></span></div>
+</div>
 <input id="file" type="file" accept=".xlsx,.xlsm,.xls" class="hidden">
 <script>
 const REQ=['DP','Dakar','HK 2','Partial','Denda'];
@@ -218,31 +247,37 @@ function preview(g){
 }
 function tabs(){$('tabs').innerHTML=tabsList.map(n=>`<button class="tab ${isReq(n)?'g ':''}${n===VIEW?'on':''}" data-t="${esc(n)}">${esc(n)}</button>`).join('')}
 
-function load(file){
-  msg('');FILE=file.name;
+let PICK=null;
+function setFile(f){
+  if(!f)return;
+  if(!/\.(xlsx|xlsm|xls)$/i.test(f.name)){$('umsg').textContent='Please choose an .xlsx or .xlsm file.';return}
+  PICK=f;$('fn').textContent=f.name+' ('+(f.size/1048576).toFixed(1)+' MB)';
+  $('umsg').textContent='';$('chips').innerHTML='';$('bgo').disabled=false;
+}
+function processFile(){
+  if(!PICK)return;
+  const b=$('bgo');b.disabled=true;b.textContent='Processing…';$('umsg').textContent='';
+  const done=()=>{b.disabled=false;b.textContent='Process'};
   const fr=new FileReader();
-  fr.onload=e=>{try{
+  fr.onerror=()=>{$('umsg').textContent='Could not read the file.';done()};
+  fr.onload=e=>setTimeout(()=>{try{
     WB=XLSX.read(e.target.result,{type:'array',cellDates:true});S={};
     for(const n of REQ){const real=WB.SheetNames.find(x=>x.trim().toLowerCase()===n.toLowerCase());
       if(real)S[n]=XLSX.utils.sheet_to_json(WB.Sheets[real],{header:1,raw:true,defval:null,blankrows:true})}
+    $('chips').innerHTML=REQ.map(n=>`<span class="chip ${S[n]?'ok':'no'}">${S[n]?'✓':'✗'} ${n}</span>`).join('');
+    const miss=REQ.filter(n=>!S[n]);
+    if(miss.length)throw new Error('Sheet not found: '+miss.join(', ')+'. Check the sheet names.');
+    OUT=generate(S);
+    if(!OUT.length)throw new Error('No rows match the criteria (job title CREDIT MARKETING OFFICER with a filled TGL LKP).');
+    FILE=PICK.name;
     tabsList=WB.SheetNames.map(n=>n.trim().toLowerCase()==='lampiran'?'Lampiran':n);
     if(!tabsList.includes('Lampiran'))tabsList.push('Lampiran');
-    VIEW='Lampiran';OUT=[];sc=-1;tabs();render();
-    const miss=REQ.filter(n=>!S[n]);
-    if(miss.length)msg('Sheet tidak ditemukan: '+miss.join(', ')+'. Pastikan nama sheet sesuai.');
-    $('stl').textContent='File dimuat. Klik LAMPIRAN untuk generate.';
-  }catch(err){msg(err.message)}};
-  fr.readAsArrayBuffer(file);
-}
-function generateNow(){
-  msg('');
-  if(!S)return msg('Klik UPDATE dan pilih workbook terlebih dahulu.');
-  const miss=REQ.filter(n=>!S[n]);
-  if(miss.length)return msg('Sheet tidak ditemukan: '+miss.join(', ')+'.');
-  try{OUT=generate(S);
-    if(!OUT.length)return msg('Tidak ada data yang memenuhi kriteria.');
-    VIEW='Lampiran';sc=-1;tabs();render();$('stl').textContent='Data Lampiran berhasil digenerate.';
-  }catch(err){msg(err.message)}
+    VIEW='Lampiran';sc=-1;FILTER='';$('q').value='';msg('');
+    $('up').classList.add('hidden');$('dash').classList.remove('hidden');
+    tabs();render();$('stl').textContent='Data Lampiran berhasil digenerate dari '+FILE;
+  }catch(err){$('umsg').textContent=err.message}
+  done()},30);
+  fr.readAsArrayBuffer(PICK);
 }
 function exportFile(type){
   if(!OUT.length)return msg('Belum ada data. Klik LAMPIRAN dulu.');
@@ -253,9 +288,11 @@ function exportFile(type){
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Lampiran');
   XLSX.writeFile(wb,type==='csv'?'Lampiran.csv':'Lampiran.xlsx',{bookType:type});
 }
-$('bup').onclick=()=>$('file').click();
-$('file').onchange=e=>e.target.files[0]&&load(e.target.files[0]);
-$('bgen').onclick=generateNow;
+$('drop').onclick=()=>$('file').click();
+$('drop').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('file').click()}};
+$('file').onchange=e=>{setFile(e.target.files[0]);e.target.value=''};
+$('bgo').onclick=processFile;
+$('bback').onclick=()=>{$('dash').classList.add('hidden');$('up').classList.remove('hidden')};
 $('dlx').onclick=()=>exportFile('xlsx');
 $('dlc').onclick=()=>exportFile('csv');
 $('q').oninput=e=>{FILTER=e.target.value;if(VIEW==='Lampiran')render()};
@@ -266,8 +303,10 @@ $('tbl').onclick=e=>{
   if(s){const i=+s.dataset.s;if(sc===i)sd=-sd;else{sc=i;sd=1}render()}
   const c=e.target.closest('[data-a]');if(c){$('nb').textContent=c.dataset.a;$('fv').textContent=c.dataset.v}
 };
-document.addEventListener('dragover',e=>e.preventDefault());
-document.addEventListener('drop',e=>{e.preventDefault();e.dataTransfer.files[0]&&load(e.dataTransfer.files[0])});
+document.addEventListener('dragover',e=>{e.preventDefault();if(!$('up').classList.contains('hidden'))$('drop').classList.add('over')});
+document.addEventListener('dragleave',e=>{if(!e.relatedTarget)$('drop').classList.remove('over')});
+document.addEventListener('drop',e=>{e.preventDefault();$('drop').classList.remove('over');
+  if(!$('up').classList.contains('hidden'))setFile(e.dataTransfer.files[0])});
 tabs();render();
 </script>
 </body>
